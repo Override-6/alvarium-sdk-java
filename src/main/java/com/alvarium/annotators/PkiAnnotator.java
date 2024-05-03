@@ -27,50 +27,24 @@ import com.alvarium.hash.HashType;
 import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.PropertyBag;
 
-class PkiAnnotator extends AbstractPkiAnnotator implements Annotator {
-  private final HashType hash;
-  private final SignatureInfo signature;
-  private final AnnotationType kind;
-  private final LayerType layer;
+class PkiAnnotator extends AbstractPkiAnnotator implements EnvironmentChecker {
+    private final HashType hash;
+    private final SignatureInfo signature;
+    private final AnnotationType kind;
+    private final LayerType layer;
 
-  protected PkiAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
-    super(logger);
-    this.hash = hash;
-    this.signature = signature;
-    this.kind = AnnotationType.PKI;
-    this.layer = layer;
-  }
+    protected PkiAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
+        super(logger);
+        this.hash = hash;
+        this.signature = signature;
+        this.kind = AnnotationType.PKI;
+        this.layer = layer;
+    }
 
-  public Annotation execute(PropertyBag ctx, byte[] data) throws AnnotatorException {
-    final String key = super.deriveHash(hash, data);
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
+        final Signable signable = Signable.fromJson(new String(data));
 
-    final Signable signable = Signable.fromJson(new String(data));
+        return verifySignature(signature.getPublicKey(), signable);
+    }
 
-    String host = "";
-    boolean isSatisfied;
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-
-      isSatisfied = verifySignature(signature.getPublicKey(), signable);
-    } catch (UnknownHostException | AnnotatorException e) {
-      isSatisfied = false;
-      this.logger.error("Error during PkiAnnotator execution: ",e);
-    } 
-
-    final Annotation annotation = new Annotation(
-        key, 
-        hash, 
-        host, 
-        layer,
-        kind, 
-        null, 
-        isSatisfied, 
-        Instant.now());
-
-    final String annotationSignature = super.signAnnotation(signature.getPrivateKey(), annotation);
-    annotation.setSignature(annotationSignature);
-    return annotation;
-
-  }
-  
 }

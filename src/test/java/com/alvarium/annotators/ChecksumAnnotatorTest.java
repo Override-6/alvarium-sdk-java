@@ -75,7 +75,7 @@ public class ChecksumAnnotatorTest {
             // init logger
             final Logger logger = LogManager.getRootLogger();
             Configurator.setRootLevel(Level.DEBUG);
-            Annotator annotator = factory.getAnnotator(checksumCfg, config, logger);
+            EnvironmentChecker annotator = factory.getAnnotator(checksumCfg, config, logger);
             
             // Generate dummy artifact and generate checksum
             
@@ -102,18 +102,14 @@ public class ChecksumAnnotatorTest {
             );
             
             byte[] data = "pipeline1/1".getBytes();
-            Annotation annotation = annotator.execute(ctx, data);
-            System.out.println(annotation.toJson());
-            assert annotation.getIsSatisfied();
+            assert annotator.isSatisfied(ctx, data);
+//            System.out.println(annotation.toJson());
 
             // change artifact checksum
             Files.write(checksumFile.toPath(), "bar".getBytes()); 
             
-            annotation = annotator.execute(ctx, data);
-            System.out.println(annotation.toJson());
-            assert !annotation.getIsSatisfied();
-
-
+            assert !annotator.isSatisfied(ctx, data);
+//            System.out.println(annotation.toJson());
     }
 
 }

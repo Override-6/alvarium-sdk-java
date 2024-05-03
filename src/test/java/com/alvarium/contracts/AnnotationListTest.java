@@ -14,57 +14,49 @@
  *******************************************************************************/
 package com.alvarium.contracts;
 
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.List;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import java.io.IOException;
-import java.time.Instant;
-import java.util.List;
-
-import com.alvarium.hash.HashType;
-
-import org.junit.Test;
-
 public class AnnotationListTest {
-  
-  @Test
-  public void toJsonShouldParseCorrectly() {
-    final Annotation annotation = new Annotation(
-      "key", 
-      HashType.NoHash,
-      "host", 
-      LayerType.Application,
-      AnnotationType.MOCK, 
-      "signature", 
-      true, 
-      Instant.now()
-    );
-    final AnnotationList annotations = new AnnotationList(List.of(annotation, annotation));
-    System.out.println(annotations.toJson());
-  }
 
-  @Test
-  public void fromJsonShouldPraseCorrectly() throws IOException {
+    @Test
+    public void toJsonShouldParseCorrectly() {
+        final Annotation annotation = new Annotation(
+                AnnotationType.MOCK,
+                true,
+                "tag"
+        );
+        final AnnotationList annotations = new AnnotationList(List.of(annotation, annotation));
+        System.out.println(annotations.toJson());
+    }
 
-    final String annotation = "{\"id\":\"01FHX2DH740WQB4WQS6A6X21QP\","+
-    "\"key\":\"key\"," +
-    "\"hash\":\"md5\"," +
-    "\"host\":\"host\"," + 
-    "\"kind\":\"tpm\"," + 
-    "\"tag\":\"9c0f17daa5cfefb0302d6f8650899b0863120e4c\"," + 
-    "\"layer\":\"app\"," + 
-    "\"signature\":\"signature\"," +
-    "\"isSatisfied\":true," +
-    "\"timestamp\":\"2021-10-13T07:55:33.585017-07:00\"}";
+    @Test
+    public void fromJsonShouldPraseCorrectly() throws IOException {
 
-    final String annotationsJson = String.format("{\"items\": [%s,%s]}", annotation, annotation);
-    final AnnotationList annotationList = AnnotationList.fromJson(annotationsJson);
-    assertNotNull(annotationList);
-    assertNotNull(annotationList.getAnnotations());
-    assertEquals(
-      "AnnotationList initialized with incorrect items length",
-      annotationList.getAnnotations().size(),
-      2
-    ); 
-  }
+        final String annotation = "{\"id\":\"01FHX2DH740WQB4WQS6A6X21QP\"," +
+                "\"key\":\"key\"," +
+                "\"hash\":\"md5\"," +
+                "\"host\":\"host\"," +
+                "\"kind\":\"tpm\"," +
+                "\"tag\":\"9c0f17daa5cfefb0302d6f8650899b0863120e4c\"," +
+                "\"layer\":\"app\"," +
+                "\"signature\":\"signature\"," +
+                "\"isSatisfied\":true," +
+                "\"timestamp\":\"2021-10-13T07:55:33.585017-07:00\"}";
+
+        final String annotationsJson = String.format("{\"items\": [%s,%s]}", annotation, annotation);
+        final AnnotationList annotationList = AnnotationList.fromJson(annotationsJson);
+        assertNotNull(annotationList);
+        assertNotNull(annotationList.getAnnotations());
+        assertEquals(
+                "AnnotationList initialized with incorrect items length",
+                annotationList.getAnnotations().size(),
+                2
+        );
+    }
 }

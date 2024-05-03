@@ -14,33 +14,15 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import javax.net.ssl.SSLSocket;
-
+import com.alvarium.contracts.AnnotationType;
+import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
-import java.time.Instant;
+import javax.net.ssl.SSLSocket;
 
-import com.alvarium.contracts.Annotation;
-import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashType;
-import com.alvarium.sign.SignatureInfo;
-import com.alvarium.utils.PropertyBag;
-
-class TlsAnnotator extends AbstractAnnotator implements Annotator {
-  private final HashType hash;
-  private final AnnotationType kind;
-  private final SignatureInfo signatureInfo;
-  private final LayerType layer;
-  
-  protected TlsAnnotator(HashType hash, SignatureInfo signatureInfo, Logger logger, LayerType layer) {
+class TlsAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+  protected TlsAnnotator(Logger logger) {
     super(logger);
-    this.hash = hash;
-    this.kind = AnnotationType.TLS;
-    this.signatureInfo = signatureInfo;
-    this.layer = layer;
   }
 
   private Boolean verifyHandshake(SSLSocket socket) {
@@ -53,32 +35,10 @@ class TlsAnnotator extends AbstractAnnotator implements Annotator {
     return !socket.isClosed();
   }
 
-  public Annotation execute(PropertyBag ctx, byte[] data) throws AnnotatorException {
+  public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
     // hash incoming data
-    final String key = super.deriveHash(hash, data);
-
-    // get host name
-    String host = "";
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      this.logger.error("Error during TlsAnnotator execution: ",e);
-    }
-
     // TLS check handshake
-    Boolean isSatisfied = this.verifyHandshake(ctx.getProperty(AnnotationType.TLS.name(),
+    return this.verifyHandshake(ctx.getProperty(AnnotationType.TLS.name(),
         SSLSocket.class));
-
-    // create an annotation without signature
-    final Annotation annotation = new Annotation(key, hash, host, layer, kind, null, isSatisfied, 
-        Instant.now());
-
-    // sign annotation
-    final String signature = super.signAnnotation(signatureInfo.getPrivateKey(),
-        annotation);
-
-    // append signature to annotation
-    annotation.setSignature(signature);
-    return annotation;
   }
 }
