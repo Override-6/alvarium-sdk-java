@@ -14,10 +14,7 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.util.HashMap;
-
 import com.alvarium.SdkInfo;
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashInfo;
 import com.alvarium.hash.HashType;
@@ -29,47 +26,49 @@ import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.junit.Ignore;
 import org.junit.Test;
 
-public class TpmAnnotatorTest {
-  
-  @Test
-  public void executeShouldCreateAnnotation() throws AnnotatorException {
-            // init logger
-    final Logger logger = LogManager.getRootLogger();
-    Configurator.setRootLevel(Level.DEBUG);
-    AnnotatorFactory factory = new AnnotatorFactory();
-    KeyInfo privateKey = new KeyInfo(
-        "./src/test/java/com/alvarium/annotators/public.key",
-        SignType.Ed25519);
-    KeyInfo publicKey = new KeyInfo(
-        "./src/test/java/com/alvarium/annotators/public.key", 
-        SignType.Ed25519);
+import java.util.HashMap;
 
-    SignatureInfo sign = new SignatureInfo(publicKey, privateKey);
-    final Gson gson = new GsonBuilder()
-      .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
-      .create();
-    
-    final String json = "{\"kind\": \"tpm\"}";
-    final AnnotatorConfig annotatorInfo = gson.fromJson(
-                json, 
+public class TpmAnnotatorTest {
+
+    @Test
+    public void executeShouldCreateAnnotation() throws AnnotatorException {
+        // init logger
+        final Logger logger = LogManager.getRootLogger();
+        Configurator.setRootLevel(Level.DEBUG);
+        EnvironmentCheckerFactory factory = new EnvironmentCheckerFactory();
+        KeyInfo privateKey = new KeyInfo(
+                "./src/test/java/com/alvarium/annotators/public.key",
+                SignType.Ed25519);
+        KeyInfo publicKey = new KeyInfo(
+                "./src/test/java/com/alvarium/annotators/public.key",
+                SignType.Ed25519);
+
+        SignatureInfo sign = new SignatureInfo(publicKey, privateKey);
+        final Gson gson = new GsonBuilder()
+                .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
+                .create();
+
+        final String json = "{\"kind\": \"tpm\"}";
+        final AnnotatorConfig annotatorInfo = gson.fromJson(
+                json,
                 AnnotatorConfig.class
-    );       
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.MD5Hash), sign, null, LayerType.Application);
-    Annotator tpm = factory.getAnnotator(annotatorInfo, config, logger);
-    
-    PropertyBag ctx = new ImmutablePropertyBag(new HashMap<String, Object>());
-    
-    byte[] data = {0x1, 0x2};
-    Annotation annotation = tpm.execute(ctx, data, "");
-    System.out.println(annotation.toJson());
-  }
-  
+
+        );
+        final AnnotatorConfig[] annotators = {annotatorInfo};
+        final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.MD5Hash), sign, null, LayerType.Application);
+        EnvironmentChecker tpm = factory.getChecker(annotatorInfo, config, logger);
+
+        PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());
+
+        byte[] data = {0x1, 0x2};
+        System.out.println("tpm.isSatisfied(ctx, data) = " + tpm.isSatisfied(ctx, data));
+    }
+
 }

@@ -15,12 +15,10 @@
 package com.alvarium.contracts;
 
 
-import com.alvarium.hash.HashType;
 import com.alvarium.serializers.AlvariumPersistence;
 import de.huxhorn.sulky.ulid.ULID;
 
 import java.io.Serializable;
-import java.time.ZonedDateTime;
 
 /**
  * A java bean that encapsulates all of the data related to a specific annotation.
@@ -28,85 +26,36 @@ import java.time.ZonedDateTime;
  */
 public class Annotation implements Serializable {
     private final String id;
-    private final String key;
-    private final HashType hash;
-    private final String host;
     private final String tag;
-    private final LayerType layer;
     private final AnnotationType kind;
-    private String signature;
     private final boolean isSatisfied;
-    private final ZonedDateTime timestamp;
-    // TagEnvKey is an environment key used to associate annotations with specific metadata,
-    // aiding in the linkage of scores across different layers of the stack. For instance, in the "app" layer,
-    // it is utilized to retrieve the commit SHA of the workload where the application is running,
-    // which is instrumental in tracing the impact on the current layer's score from the lower layers.
-    public static final String TAG_ENV_KEY = "TAG";
 
-    private static final ULID ULID = new ULID();
 
-    public Annotation(String key, HashType hash, String host, LayerType layer, AnnotationType kind, String signature,
-                      Boolean isSatisfied, ZonedDateTime timestamp) {
-        this.id = ULID.nextULID();
-        this.key = key;
-        this.hash = hash;
-        this.host = host;
-        this.tag = getTagValue(layer);
-        this.layer = layer;
+    public Annotation(AnnotationType kind, boolean isSatisfied, String tag) {
+        ULID ulid = new ULID();
+        this.id = ulid.nextULID();
+        this.tag = tag;
         this.kind = kind;
-        this.signature = signature;
         this.isSatisfied = isSatisfied;
-        this.timestamp = timestamp;
-
     }
 
-    //setters
-
-    public void setSignature(String signature) {
-        this.signature = signature;
-    }
-
-    // getters
 
     public String getId() {
         return this.id;
-    }
-
-    public String getKey() {
-        return this.key;
-    }
-
-    public HashType getHash() {
-        return this.hash;
-    }
-
-    public String getHost() {
-        return this.host;
     }
 
     public String getTag() {
         return this.tag;
     }
 
-    public LayerType getLayer() {
-        return this.layer;
-    }
-
     public AnnotationType getKind() {
         return this.kind;
-    }
-
-    public String getSignature() {
-        return this.signature;
     }
 
     public Boolean getIsSatisfied() {
         return this.isSatisfied;
     }
 
-    public ZonedDateTime getTimestamp() {
-        return this.timestamp;
-    }
 
     /**
      * returns the JSON representation of the Annotation object
@@ -127,13 +76,14 @@ public class Annotation implements Serializable {
         return AlvariumPersistence.GSON.fromJson(json, Annotation.class);
     }
 
-    private String getTagValue(LayerType layer) {
-        switch (layer) {
-            case Application:
-                return System.getenv(TAG_ENV_KEY) == null ? "" : System.getenv(TAG_ENV_KEY);
-            default:
-                break;
-        }
-        return "";
+    /**
+     * Returns an identity string, two annotations that are equals should also return the same identityString.
+     */
+    public String identityString() {
+        return id +
+            tag +
+            kind +
+            isSatisfied;
     }
+
 }

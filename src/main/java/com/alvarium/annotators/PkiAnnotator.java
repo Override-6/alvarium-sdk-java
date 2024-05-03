@@ -14,60 +14,22 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import com.alvarium.contracts.Annotation;
-import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashType;
 import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.ZonedDateTime;
+class PkiAnnotator extends AbstractPkiAnnotator implements EnvironmentChecker {
+    private final SignatureInfo signature;
 
-class PkiAnnotator extends AbstractPkiAnnotator implements Annotator {
-  private final HashType hash;
-  private final SignatureInfo signature;
-  private final AnnotationType kind;
-  private final LayerType layer;
+    protected PkiAnnotator(SignatureInfo signature, Logger logger) {
+        super(logger);
+        this.signature = signature;
+    }
 
-  protected PkiAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
-    super(logger);
-    this.hash = hash;
-    this.signature = signature;
-    this.kind = AnnotationType.PKI;
-    this.layer = layer;
-  }
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
+        final Signable signable = Signable.fromJson(new String(data));
 
-  public Annotation execute(PropertyBag ctx, byte[] data, String key) throws AnnotatorException {
-    final Signable signable = Signable.fromJson(new String(data));
+        return verifySignature(signature.getPublicKey(), signable);
+    }
 
-    String host = "";
-    boolean isSatisfied;
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-
-      isSatisfied = verifySignature(signature.getPublicKey(), signable);
-    } catch (UnknownHostException | AnnotatorException e) {
-      isSatisfied = false;
-      this.logger.error("Error during PkiAnnotator execution: ",e);
-    } 
-
-    final Annotation annotation = new Annotation(
-        key, 
-        hash, 
-        host, 
-        layer,
-        kind, 
-        null, 
-        isSatisfied, 
-        ZonedDateTime.now());
-
-    final String annotationSignature = super.signAnnotation(signature.getPrivateKey(), annotation);
-    annotation.setSignature(annotationSignature);
-    return annotation;
-
-  }
-  
 }

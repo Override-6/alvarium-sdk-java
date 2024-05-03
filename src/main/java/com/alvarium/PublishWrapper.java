@@ -14,6 +14,7 @@
  *******************************************************************************/
 package com.alvarium;
 
+
 import com.alvarium.serializers.AlvariumPersistence;
 
 import java.io.Serializable;
@@ -23,28 +24,28 @@ import java.io.Serializable;
  * and appends the required metadata
  */
 public class PublishWrapper implements Serializable {
-  private final SdkAction action;
-  private final String messageType;
-  private final Object content;
+    private final SdkAction action;
+    private final String messageType;
+    private final Object content;
 
 
-  public PublishWrapper(SdkAction action, String messageType, Object content) {
-    this.action = action;
-    this.messageType = messageType;
-    this.content = content;
-  }
+    public PublishWrapper(SdkAction action, String messageType, Object content) {
+        this.action = action;
+        this.messageType = messageType;
+        this.content = content;
+    }
 
-  public SdkAction getAction() {
-    return action;
-  }
+    public SdkAction getAction() {
+        return action;
+    }
 
-  public String getMessageType() {
-    return messageType;
-  }
+    public String getMessageType() {
+        return messageType;
+    }
 
-  public Object getContent() {
-    return content;
-  }
+    public Object getContent() {
+        return content;
+    }
 
 
   /**

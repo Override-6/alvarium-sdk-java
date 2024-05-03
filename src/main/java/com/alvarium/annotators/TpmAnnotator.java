@@ -14,8 +14,6 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import com.alvarium.contracts.Annotation;
-import com.alvarium.contracts.AnnotationType;
 import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashType;
 import com.alvarium.sign.SignatureInfo;
@@ -26,79 +24,46 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Instant;
-import java.time.ZonedDateTime;
 
-class TpmAnnotator extends AbstractAnnotator implements Annotator {
-  private final HashType hash;
-  private final AnnotationType kind;
-  private final SignatureInfo signature;
-  private final LayerType layer;
-  private final String directTpmPath = "/dev/tpm0";
-  private final String tpmKernelManagedPath = "/dev/tpmrm0";
+class TpmAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+    private static final String DIRECT_TPM_PATH = "/dev/tpm0";
+    private static final String TPM_KERNEL_MANAGED_PATH = "/dev/tpmrm0";
 
-  protected TpmAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
-    super(logger);
-    this.hash = hash;
-    this.signature = signature;
-    this.kind = AnnotationType.TPM;
-    this.layer = layer;
-  }
 
-  public Annotation execute(PropertyBag ctx, byte[] data, String key) throws AnnotatorException {
-    String host = "";
-    boolean isSatisfied;
-    try {
-      host = InetAddress.getLocalHost().getHostName();
-      // Checks whether the TPM driver is accessible through the kernel resource manager, and if that 
-      // failes, checks if the TPM driver can be accessed directly
-      isSatisfied = checkTpmExists(this.tpmKernelManagedPath) ||
-        checkTpmExists(this.directTpmPath);
-    } catch (UnknownHostException | AnnotatorException e) {
-      isSatisfied = false;
-      this.logger.error("Error during TpmAnnotator execution: ",e);
+    protected TpmAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
+        super(logger);
     }
 
-    final Annotation annotation = new Annotation(
-          key,
-          hash,
-          host,
-          layer,
-          kind,
-          null,
-          isSatisfied,
-          ZonedDateTime.now());
-    
-    final String annotationSignature = super.signAnnotation(signature.getPrivateKey(), annotation);
-    annotation.setSignature(annotationSignature);
-    return annotation;
-  }
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
+        // Checks whether the TPM driver is accessible through the kernel resource manager, and if that
+        // failes, checks if the TPM driver can be accessed directly
+        return checkTpmExists(TPM_KERNEL_MANAGED_PATH) ||
+                checkTpmExists(DIRECT_TPM_PATH);
+    }
 
-  /**
-   * Checks whether the TPM driver exists (can be accessed) or not, this check was found on the 
-   * Microsoft TSS.MSR repository found here 
-   * https://github.com/microsoft/TSS.MSR/blob/d715b/TSS.Java/src/tss/TpmDeviceLinux.java
-   * 
-   * @param devName the tpm path
-   * @return True if TPM found, false otherwise
-   * @throws AnnotatorException
-   */
-  private Boolean checkTpmExists(String devName) throws AnnotatorException {
-    final RandomAccessFile devTpm;
-    final File devTpm0 = new File(devName);
-    if (!devTpm0.exists()) {
-      return false;
+    /**
+     * Checks whether the TPM driver exists (can be accessed) or not, this check was found on the
+     * Microsoft TSS.MSR repository found here
+     * https://github.com/microsoft/TSS.MSR/blob/d715b/TSS.Java/src/tss/TpmDeviceLinux.java
+     *
+     * @param devName the tpm path
+     * @return True if TPM found, false otherwise
+     * @throws AnnotatorException
+     */
+    private Boolean checkTpmExists(String devName) throws AnnotatorException {
+        final RandomAccessFile devTpm;
+        final File devTpm0 = new File(devName);
+        if (!devTpm0.exists()) {
+            return false;
+        }
+        try {
+            devTpm = new RandomAccessFile(devName, "rwd");
+            devTpm.close();
+            return true;
+        } catch (FileNotFoundException e) {
+            return false;
+        } catch (IOException e) {
+            throw new AnnotatorException("Could not close tpm file", e);
+        }
     }
-    try {
-        devTpm = new RandomAccessFile(devName, "rwd");
-        devTpm.close();
-        return true;
-    } catch (FileNotFoundException e) {
-        return false;
-    } catch (IOException e) {
-      throw new AnnotatorException("Could not close tpm file", e);
-    }
-  }
 }

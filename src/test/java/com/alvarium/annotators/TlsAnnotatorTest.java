@@ -22,7 +22,6 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import com.alvarium.SdkInfo;
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.AnnotationType;
 import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashInfo;
@@ -40,6 +39,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TlsAnnotatorTest {
@@ -50,7 +50,7 @@ public class TlsAnnotatorTest {
     final Logger logger = LogManager.getRootLogger();
     Configurator.setRootLevel(Level.DEBUG);
     // construct annotator
-    final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
+    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
     final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
         SignType.Ed25519);
     final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
@@ -67,7 +67,7 @@ public class TlsAnnotatorTest {
     );      
     final AnnotatorConfig[] annotators = {annotatorInfo};  
     final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final Annotator annotator = annotatorFactory.getAnnotator(annotatorInfo, config, logger); 
+    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
     
     // dummy data
     final byte[] data = "test data".getBytes();
@@ -80,7 +80,6 @@ public class TlsAnnotatorTest {
     map.put(AnnotationType.TLS.name(), socket);
     final PropertyBag bag = new ImmutablePropertyBag(map);
 
-    final Annotation annotation = annotator.execute(bag, data, "");
-    System.out.println(annotation.toJson());
-  }  
+    assert annotator.isSatisfied(bag, data);
+  }
 }

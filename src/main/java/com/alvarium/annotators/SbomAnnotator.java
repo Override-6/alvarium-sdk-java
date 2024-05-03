@@ -13,79 +13,42 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-
-import org.apache.logging.log4j.Logger;
 
 import com.alvarium.annotators.sbom.SbomAnnotatorConfig;
 import com.alvarium.annotators.sbom.SbomException;
 import com.alvarium.annotators.sbom.SbomProvider;
 import com.alvarium.annotators.sbom.SbomProviderFactory;
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashType;
-import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.PropertyBag;
+import org.apache.logging.log4j.Logger;
 
-public class SbomAnnotator extends AbstractAnnotator implements Annotator {
-  final SbomAnnotatorConfig cfg;
+public class SbomAnnotator extends AbstractAnnotator implements EnvironmentChecker {
 
-  final HashType hash;
-  final SignatureInfo signature;
-  final AnnotationType kind;
-  final LayerType layer;
+    private final SbomProvider sbom;
 
-  protected SbomAnnotator(SbomAnnotatorConfig cfg, HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
-    super(logger);
-    this.cfg = cfg;
-    this.hash = hash;
-    this.signature = signature;
-    this.kind = AnnotationType.SBOM;
-    this.layer = layer;
-  }
-  
-  @Override 
-  public Annotation execute(PropertyBag ctx, byte[] data, String key) throws AnnotatorException {
-    String host = "";
-    try{
-      host = InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      this.logger.error("Error during SbomAnnotator execution: ",e);
+
+    protected SbomAnnotator(SbomAnnotatorConfig cfg, Logger logger) throws AnnotatorException {
+        super(logger);
+        try {
+            this.sbom = new SbomProviderFactory().getProvider(cfg, this.logger);
+        } catch (SbomException e) {
+            throw new AnnotatorException("Could not initialize SBOM provider", e);
+        }
     }
-    
-    boolean isSatisfied = false;
-    try {
-      final SbomProvider sbom = new SbomProviderFactory().getProvider(this.cfg, this.logger);
-      final String filePath = ctx.getProperty(AnnotationType.SBOM.name(), String.class);
-      boolean isValid = sbom.validate(filePath);
-      boolean exists = sbom.exists(filePath);
-      boolean matchesBuild = sbom.matchesBuild(filePath, ".");
-      isSatisfied = isValid && exists && matchesBuild;
-    } catch (Exception e) {
-      this.logger.error("Error during SbomAnnotator execution: ", e);
+
+    @Override
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
+        try {
+            final String filePath = ctx.getProperty(AnnotationType.SBOM.name(), String.class);
+
+            boolean isValid = sbom.validate(filePath);
+            boolean exists = sbom.exists(filePath);
+            boolean matchesBuild = sbom.matchesBuild(filePath, ".");
+
+            return isValid && exists && matchesBuild;
+        } catch (SbomException e) {
+            this.logger.error("Error during SbomAnnotator execution: ", e);
+            return false;
+        }
     }
-    
-    final Annotation annotation = new Annotation(
-        key, 
-        hash, 
-        host, 
-        layer,
-        kind, 
-        null, 
-        isSatisfied, 
-        ZonedDateTime.now()
-    );
-
-    final String annotationSignature = super.signAnnotation(
-        this.signature.getPrivateKey(), 
-        annotation
-    );
-
-    annotation.setSignature(annotationSignature);
-    return annotation;	
-  }
 }

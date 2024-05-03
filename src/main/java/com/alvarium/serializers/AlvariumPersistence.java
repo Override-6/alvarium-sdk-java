@@ -2,6 +2,7 @@ package com.alvarium.serializers;
 
 import com.alvarium.PublishWrapper;
 import com.alvarium.contracts.Annotation;
+import com.alvarium.contracts.SignedAnnotationBundle;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -14,6 +15,7 @@ public class AlvariumPersistence {
         .registerTypeAdapter(PublishWrapper.class, new PublishWrapperConverter())
         .registerTypeAdapter(ZonedDateTime.class, new ZonedDateTimeConverter())
         .registerTypeAdapter(Annotation.class, new AnnotationConverter())
+        .registerTypeAdapter(SignedAnnotationBundle.class, new SignedAnnotationBundleConverter())
         .disableHtmlEscaping()
         .create();
 

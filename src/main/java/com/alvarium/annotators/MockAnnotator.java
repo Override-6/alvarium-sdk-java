@@ -14,47 +14,20 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-
-import com.alvarium.contracts.Annotation;
-import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashProviderFactory;
-import com.alvarium.hash.HashType;
-import com.alvarium.hash.HashTypeException;
-import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.PropertyBag;
 
 /**
  * a dummy annotator to be used in unit tests
  */
-class MockAnnotator implements Annotator {
-  private final MockAnnotatorConfig cfg;
-  private final HashType hash;
-  private final AnnotationType kind;
-  private final SignatureInfo signature;
-  private final LayerType layer;
+class MockAnnotator implements EnvironmentChecker {
+    private final MockAnnotatorConfig cfg;
 
-  protected MockAnnotator(MockAnnotatorConfig cfg, HashType hash, SignatureInfo signature, LayerType layer) {
-    this.cfg = cfg;
-    this.hash = hash;
-    this.kind = AnnotationType.MOCK;
-    this.signature = signature;
-    this.layer = layer;
-  }
 
-  public Annotation execute(PropertyBag ctx, byte[] data, String key) throws AnnotatorException {
-    try {
-      final String host = InetAddress.getLocalHost().getHostName();
-      final String sig = signature.getPublicKey().getType().toString();
-
-      final Annotation annotation = new Annotation(key, hash, host, layer, kind, sig, cfg.getShouldSatisfy(), ZonedDateTime.now());
-      return annotation;
-    } catch (UnknownHostException e) {
-      throw new AnnotatorException("Could not get hostname", e);
+    protected MockAnnotator(MockAnnotatorConfig cfg) {
+        this.cfg = cfg;
     }
-  } 
+
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) {
+        return cfg.getShouldSatisfy();
+    }
 }

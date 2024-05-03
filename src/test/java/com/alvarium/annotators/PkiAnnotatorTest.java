@@ -17,7 +17,6 @@ package com.alvarium.annotators;
 import java.util.HashMap;
 
 import com.alvarium.SdkInfo;
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashInfo;
 import com.alvarium.hash.HashType;
@@ -45,7 +44,7 @@ public class PkiAnnotatorTest {
 
   @Test
   public void executeShouldGetSatisfiedAnnotation() throws AnnotatorException {
-    final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
+    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
     final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
         SignType.Ed25519);
     final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
@@ -68,14 +67,13 @@ public class PkiAnnotatorTest {
     final AnnotatorConfig pkiCfg = this.getAnnotatorCfg();
     final AnnotatorConfig[] annotators = {pkiCfg};  
     final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final Annotator annotator = annotatorFactory.getAnnotator(pkiCfg, config, logger);
-    final Annotation annotation = annotator.execute(ctx, data, "");
-    assertTrue("isSatisfied should be true", annotation.getIsSatisfied());
+    final EnvironmentChecker annotator = annotatorFactory.getChecker(pkiCfg, config, logger);
+    assertTrue("isSatisfied should be true", annotator.isSatisfied(ctx, data));
   }
 
   @Test
   public void executeShouldGetUnsatisfiedAnnotation() throws AnnotatorException {
-    final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
+    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
     final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
         SignType.Ed25519);
     final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
@@ -97,10 +95,9 @@ public class PkiAnnotatorTest {
     final AnnotatorConfig pkiCfg = this.getAnnotatorCfg();
     final AnnotatorConfig[] annotators = {pkiCfg};   
     final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final Annotator annotator = annotatorFactory.getAnnotator(pkiCfg, config, logger);
+    final EnvironmentChecker annotator = annotatorFactory.getChecker(pkiCfg, config, logger);
 
-    final Annotation annotation = annotator.execute(ctx, data, "");
-    assertFalse("isSatisfied should be false", annotation.getIsSatisfied());
+    assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
   }
 
   public AnnotatorConfig getAnnotatorCfg() {

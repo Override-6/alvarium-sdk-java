@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.util.HashMap;
 
 import com.alvarium.SdkInfo;
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashInfo;
 import com.alvarium.hash.HashType;
@@ -41,7 +40,7 @@ public class SourceAnnotatorTest {
   @Test
   public void executeShouldReturnAnnotation() throws AnnotatorException, IOException {
     // construct annotator
-    final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
+    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
     final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
         SignType.Ed25519);
     final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
@@ -64,14 +63,13 @@ public class SourceAnnotatorTest {
     final Logger logger = LogManager.getRootLogger();
     Configurator.setRootLevel(Level.DEBUG);
 
-    final Annotator annotator = annotatorFactory.getAnnotator(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
 
     // dummy data and empty prop bag
     final byte[] data = "test data".getBytes();
     final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<String, Object>());
 
-    final Annotation annotation = annotator.execute(ctx, data, "");
-    System.out.println(annotation.toJson());
+    assert annotator.isSatisfied(ctx, data);
   }
 
 }

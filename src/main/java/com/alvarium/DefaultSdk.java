@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * Copyright 2023 Dell Inc.
  *
@@ -14,15 +13,13 @@
  *******************************************************************************/
 package com.alvarium;
 
-import com.alvarium.annotators.Annotator;
-import com.alvarium.annotators.AnnotatorConfig;
-import com.alvarium.annotators.AnnotatorException;
-import com.alvarium.annotators.AnnotatorFactory;
-import com.alvarium.contracts.Annotation;
-import com.alvarium.contracts.AnnotationList;
-import com.alvarium.contracts.AnnotationType;
+import com.alvarium.annotators.*;
+import com.alvarium.contracts.*;
+import com.alvarium.hash.HashProvider;
 import com.alvarium.hash.HashProviderFactory;
+import com.alvarium.hash.HashType;
 import com.alvarium.hash.HashTypeException;
+import com.alvarium.sign.SignatureInfo;
 import com.alvarium.streams.StreamException;
 import com.alvarium.streams.StreamProvider;
 import com.alvarium.streams.StreamProviderFactory;
@@ -30,20 +27,51 @@ import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 public class DefaultSdk implements Sdk {
-    private final Annotator[] annotators;
+    private final EnvironmentCheckerEntry[] checkers;
     private final SdkInfo config;
     private final StreamProvider stream;
     private final Logger logger;
 
-    public DefaultSdk(Annotator[] annotators, SdkInfo config, Logger logger) throws StreamException {
-        this.annotators = annotators;
+    private final HashType hash;
+    private final SignatureInfo signature;
+    private final LayerType layer;
+    private final HashProvider hashProvider;
+
+    private static final String HOST_NAME;
+
+    static {
+        try {
+            HOST_NAME = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    // TagEnvKey is an environment key used to associate annotations with specific metadata,
+    // aiding in the linkage of scores across different layers of the stack. For instance, in the "app" layer,
+    // it is utilized to retrieve the commit SHA of the workload where the application is running,
+    // which is instrumental in tracing the impact on the current layer's score from the lower layers.
+    public static final String TAG_ENV_KEY = "TAG";
+
+    public DefaultSdk(EnvironmentCheckerEntry[] checkers, SdkInfo config, Logger logger) throws StreamException, HashTypeException {
+        this.checkers = checkers;
         this.config = config;
         this.logger = logger;
+        this.hash = config.getHash().getType();
+        this.signature = config.getSignature();
+        this.layer = config.getLayer();
+        this.hashProvider = new HashProviderFactory().getProvider(hash);
+
 
         // init stream
         final StreamProviderFactory streamFactory = new StreamProviderFactory();
@@ -52,11 +80,8 @@ public class DefaultSdk implements Sdk {
         this.logger.debug("stream provider connected successfully.");
     }
 
-    public void create(PropertyBag properties, byte[] data) throws AnnotatorException,
-        StreamException {
-        final List<Annotation> annotations = this.createAnnotations(properties, data);
-        this.publishAnnotations(SdkAction.CREATE, annotations);
-        this.logger.debug("data annotated and published successfully.");
+    public void create(PropertyBag properties, byte[] data) throws AnnotatorException, StreamException {
+        sdkCall(properties, SdkAction.CREATE, data);
     }
 
     public void create(byte[] data) throws AnnotatorException, StreamException {
@@ -64,69 +89,49 @@ public class DefaultSdk implements Sdk {
         this.create(properties, data);
     }
 
-    public void mutate(PropertyBag properties, byte[] oldData, byte[] newData) throws
-        AnnotatorException, StreamException {
-        final List<Annotation> annotations = new ArrayList<Annotation>();
-
+    public void mutate(PropertyBag properties, byte[] oldData, byte[] newData) throws AnnotatorException, StreamException {
         // source annotate the old data
-        final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
-        final Annotator sourceAnnotator = annotatorFactory.getAnnotator(
-            new AnnotatorConfig(AnnotationType.SOURCE),
-            this.config,
-            this.logger
-        );
+        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
+        final EnvironmentChecker sourceAnnotator = annotatorFactory.getChecker(new AnnotatorConfig(AnnotationType.SOURCE), this.config, this.logger);
 
-        String key;
-        try {
-            var hasher = new HashProviderFactory().getProvider(config.getHash().getType());
-            key = hasher.derive(oldData);
-        } catch (HashTypeException e) {
-            throw new RuntimeException(e);
-        }
+        String tag = this.getTagValue(layer);
 
-        final Annotation sourceAnnotation = sourceAnnotator.execute(properties, oldData, key);
-        annotations.add(sourceAnnotation);
+        Annotation sourceOriginAnnotation = createAnnotation(AnnotationType.SOURCE, sourceAnnotator, properties, tag, oldData);
 
-        // Add annotations for new data
-        for (Annotation annotation : this.createAnnotations(properties, newData)) {
-            // TLS is ignored in mutate to prevent needless penalization
-            // See https://github.com/project-alvarium/alvarium-sdk-go/issues/19
-            if (annotation.getKind() != AnnotationType.TLS) {
-                annotations.add(annotation);
-            }
-        }
+        var checkersNoTls = Arrays.stream(checkers).filter(e -> e.getType() != AnnotationType.TLS).toArray(EnvironmentCheckerEntry[]::new);
+        AnnotationBundle newDataBundle = this.createAnnotations(checkersNoTls, properties, newData);
+
+        List<Annotation> annotationsMerged = new ArrayList<>(checkersNoTls.length + 1) {{
+            add(sourceOriginAnnotation);
+            newDataBundle.getAnnotations().forEach(this::add);
+        }};
+        AnnotationBundle bundle = new AnnotationBundle(annotationsMerged, newDataBundle.getHost(), newDataBundle.getKey(), newDataBundle.getHash(), newDataBundle.getLayer(), newDataBundle.getTimestamp());
 
         // publish to the stream provider
-        this.publishAnnotations(SdkAction.MUTATE, annotations);
+        this.publishAnnotations(SdkAction.MUTATE, bundle);
         this.logger.debug("data annotated and published successfully.");
     }
 
     public void mutate(byte[] oldData, byte[] newData) throws AnnotatorException, StreamException {
-        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<>());
         this.mutate(properties, oldData, newData);
     }
 
-    public void transit(PropertyBag properties, byte[] data) throws AnnotatorException,
-        StreamException {
-        final List<Annotation> annotations = this.createAnnotations(properties, data);
-        this.publishAnnotations(SdkAction.TRANSIT, annotations);
-        this.logger.debug("data annotated and published successfully.");
+    public void transit(PropertyBag properties, byte[] data) throws AnnotatorException, StreamException {
+        sdkCall(properties, SdkAction.TRANSIT, data);
     }
 
     public void transit(byte[] data) throws AnnotatorException, StreamException {
-        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<>());
         this.transit(properties, data);
     }
 
-    public void publish(PropertyBag properties, byte[] data) throws AnnotatorException,
-        StreamException {
-        final List<Annotation> annotations = this.createAnnotations(properties, data);
-        this.publishAnnotations(SdkAction.PUBLISH, annotations);
-        this.logger.debug("data annotated and published successfully.");
+    public void publish(PropertyBag properties, byte[] data) throws AnnotatorException, StreamException {
+        sdkCall(properties, SdkAction.PUBLISH, data);
     }
 
     public void publish(byte[] data) throws AnnotatorException, StreamException {
-        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<>());
         this.publish(properties, data);
     }
 
@@ -135,33 +140,45 @@ public class DefaultSdk implements Sdk {
         this.logger.debug("stream provider connection terminated successfully.");
     }
 
+    private void sdkCall(PropertyBag bag, SdkAction callAction, byte[] data) throws StreamException, AnnotatorException {
+        final AnnotationBundle annotations = this.createAnnotations(checkers, bag, data);
+        this.publishAnnotations(callAction, annotations);
+        this.logger.debug("data annotated and published successfully.");
+    }
+
     /**
      * Executes all the specified annotators and returns a list of all the created annotations
      *
      * @param properties
      * @param data
      * @return
-     * @throws AnnotatorException
      */
-    private List<Annotation> createAnnotations(PropertyBag properties, byte[] data)
-        throws AnnotatorException {
+    private AnnotationBundle createAnnotations(EnvironmentCheckerEntry[] checkers, PropertyBag properties, byte[] data) {
         final List<Annotation> annotations = new ArrayList<>();
 
-        String key;
-        try {
-            var hasher = new HashProviderFactory().getProvider(config.getHash().getType());
-            key = hasher.derive(data);
-        } catch (HashTypeException e) {
-            throw new RuntimeException(e);
-        }
+        String key = this.hashProvider.derive(data);
+
+        String tag = getTagValue(this.layer);
 
         // Annotate incoming data
-        for (Annotator annotator : this.annotators) {
-            final Annotation annotation = annotator.execute(properties, data, key);
-            annotations.add(annotation);
+        for (EnvironmentCheckerEntry entry : checkers) {
+            annotations.add(createAnnotation(entry.getType(), entry.getChecker(), properties, tag, data));
         }
 
-        return annotations;
+        return new AnnotationBundle(annotations, HOST_NAME, key, hash, layer, ZonedDateTime.now());
+    }
+
+    private Annotation createAnnotation(AnnotationType type, EnvironmentChecker checker, PropertyBag bag, String tag, byte[] data) {
+        boolean isSatisfied;
+        try {
+            isSatisfied = checker.isSatisfied(bag, data);
+        } catch (AnnotatorException e) {
+            logger.error(String.format("Error during %s execution", type), e);
+            isSatisfied = false;
+        }
+
+        // TODO didnt really understood how the tag could be used so I let it in the annotations
+        return new Annotation(type, isSatisfied, tag);
     }
 
     /**
@@ -169,19 +186,28 @@ public class DefaultSdk implements Sdk {
      * content type
      *
      * @param action
-     * @param annotations
+     * @param bundle
      * @throws StreamException
      */
-    private void publishAnnotations(SdkAction action, List<Annotation> annotations)
-        throws StreamException {
-        final AnnotationList annotationList = new AnnotationList(annotations);
+    private void publishAnnotations(SdkAction action, AnnotationBundle bundle) throws StreamException, AnnotatorException {
+
+        SignedAnnotationBundle signedBundle;
+        signedBundle = AnnotationSigner.signBundle(signature.getPrivateKey(), bundle);
 
         // publish list of annotations to the StreamProvider
-        final PublishWrapper wrapper = new PublishWrapper(
-            action,
-            annotationList.getClass().getName(),
-            annotationList
-        );
+        final PublishWrapper wrapper = new PublishWrapper(action, bundle.getClass().getName(), signedBundle);
+
         this.stream.publish(wrapper);
+    }
+
+
+    private String getTagValue(LayerType layer) {
+        switch (layer) {
+            case Application:
+                return System.getenv(TAG_ENV_KEY) == null ? "" : System.getenv(TAG_ENV_KEY);
+            default:
+                break;
+        }
+        return "";
     }
 }
