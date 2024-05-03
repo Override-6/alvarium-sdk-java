@@ -13,19 +13,18 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import com.alvarium.contracts.Annotation;
 import com.alvarium.utils.PropertyBag;
 
 /**
- * A unit responsible for annotating raw data and producing an Annotation object
+ * A unit responsible for validating if the checker's environment satisfies its defined rules
  */
-public interface Annotator {
-  /**
-   * creates an Annotation from the given raw data
-   * @param ctx
-   * @param data
-   * @return Annotation object
-   * @throws AnnotatorException
-   */
-  public Annotation execute(PropertyBag ctx, byte[] data) throws AnnotatorException;  
+public interface EnvironmentChecker {
+    /**
+     * creates an Annotation from the given raw data
+     *
+     * @param ctx
+     * @param data
+     * @return Annotation object
+     */
+    boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException;
 }

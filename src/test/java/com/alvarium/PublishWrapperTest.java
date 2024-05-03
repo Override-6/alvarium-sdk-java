@@ -29,36 +29,31 @@ import org.junit.Test;
 
 public class PublishWrapperTest {
 
-  @Test
-  public void toJsonShouldReturnAppropriateRepresentation() {
-    final SdkAction action = SdkAction.CREATE;
-    final String messageType = "test type";
-    final ArrayList<Integer> content = new ArrayList<Integer>(Arrays.asList(1,2,3,4));     
+    @Test
+    public void toJsonShouldReturnAppropriateRepresentation() {
+        final SdkAction action = SdkAction.CREATE;
+        final String messageType = "test type";
+        final ArrayList<Integer> content = new ArrayList<Integer>(Arrays.asList(1, 2, 3, 4));
 
-    final PublishWrapper wrapper = new PublishWrapper(action,messageType, content);
-    System.out.println(wrapper.toJson());
-  }  
+        final PublishWrapper wrapper = new PublishWrapper(action, messageType, content);
+        System.out.println(wrapper.toJson());
+    }
 
-  @Test
-  public void toJsonShouldParseAnnotationCorrectly() {
-    final SdkAction action = SdkAction.CREATE;
-    final String messageType = "test type";
-    final Annotation annotation = new Annotation(
-      "key", 
-      HashType.MD5Hash, 
-      "host", 
-      LayerType.Application,
-      AnnotationType.TPM, 
-      "signature", 
-      true, 
-      Instant.now()
-    );
-    final List<Annotation> annotations = List.of(annotation, annotation);
-    final PublishWrapper wrapper = new PublishWrapper(
-        action,
-        messageType, 
-        new AnnotationList(annotations)
-    );
-    System.out.println(wrapper.toJson());
-  }
+    @Test
+    public void toJsonShouldParseAnnotationCorrectly() {
+        final SdkAction action = SdkAction.CREATE;
+        final String messageType = "test type";
+        final Annotation annotation = new Annotation(
+                AnnotationType.TPM,
+                true,
+                "tag"
+        );
+        final List<Annotation> annotations = List.of(annotation, annotation);
+        final PublishWrapper wrapper = new PublishWrapper(
+                action,
+                messageType,
+                new AnnotationList(annotations)
+        );
+        System.out.println(wrapper.toJson());
+    }
 }

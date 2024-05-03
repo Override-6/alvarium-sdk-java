@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * Copyright 2023 Dell Inc.
  *
@@ -15,86 +14,50 @@
 package com.alvarium.annotators;
 
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.Collator;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
-import org.apache.logging.log4j.Logger;
-
-import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashProvider;
 import com.alvarium.hash.HashProviderFactory;
 import com.alvarium.hash.HashType;
 import com.alvarium.hash.HashTypeException;
-import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.PropertyBag;
+import org.apache.logging.log4j.Logger;
 
-class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 
-    private final HashType hash;
-    private final AnnotationType kind;
-    private final SignatureInfo signature;
-    private final LayerType layer;
+class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+
 
     private HashProvider hashProvider;
 
-    protected SourceCodeAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
+    protected SourceCodeAnnotator(HashType hash, Logger logger) throws AnnotatorException {
         super(logger);
-        this.hash = hash;
-        this.kind = AnnotationType.SourceCode;
-        this.signature = signature;
-        this.layer = layer;
+        this.initHashProvider(hash);
     }
 
     // File (git working directory) is to be passed in the ctx bag
     // expects commitHash and directory from ctx
     @Override
-    public Annotation execute(PropertyBag ctx, byte[] data) throws AnnotatorException {
-        this.initHashProvider(this.hash);
-        final String key = this.hashProvider.derive(data);
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
 
         final SourceCodeAnnotatorProps props = ctx.getProperty(
-            AnnotationType.SourceCode.name(),
-            SourceCodeAnnotatorProps.class
+                AnnotationType.SourceCode.name(),
+                SourceCodeAnnotatorProps.class
         );
 
-        String host = "";
-        boolean isSatisfied;
-        try{
-            host = InetAddress.getLocalHost().getHostName();
-            final String checksum = this.readChecksum(props.getChecksumPath());
-            final String generatedChecksum = this.generateChecksum(props.getSourceCodePath());
-            isSatisfied = generatedChecksum.equals(checksum);
-        } catch (UnknownHostException | AnnotatorException e) {
-            isSatisfied = false;
-            this.logger.error("Error during SourceCodeAnnotator execution: ",e);
-        }
+        final String checksum = this.readChecksum(props.getChecksumPath());
+        final String generatedChecksum = this.generateChecksum(props.getSourceCodePath());
 
-        final Annotation annotation = new Annotation(
-                key,
-                hash,
-                host,
-                layer,
-                kind,
-                null,
-                isSatisfied,
-                Instant.now());
-
-        final String annotationSignature = super.signAnnotation(signature.getPrivateKey(), annotation);
-        annotation.setSignature(annotationSignature);
-        return annotation;
+        return generatedChecksum.equals(checksum);
     }
 
     private String readChecksum(String path) throws AnnotatorException {
@@ -105,12 +68,12 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
             throw new AnnotatorException("Failed to read file, could not validate checksum", e);
         } catch (SecurityException e) {
             throw new AnnotatorException(
-                "Insufficient permission to access file, could not validate checksum", 
-                e
+                    "Insufficient permission to access file, could not validate checksum",
+                    e
             );
         } catch (OutOfMemoryError e) {
             throw new AnnotatorException(
-                "Failed to read file due to size larger than 2GB, could not validate checksum " + e
+                    "Failed to read file due to size larger than 2GB, could not validate checksum " + e
             );
         } catch (Exception e) {
             throw new AnnotatorException("Could not validate checksum");
@@ -118,14 +81,15 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
     }
 
     /**
-     *  Initializes the hash provider used to hash the source code 
+     * Initializes the hash provider used to hash the source code
+     *
      * @return HashProvider
-     * @throws AnnotatorException - If hashing algorithm not found, 
-     * or if an unknown exception was thrown
+     * @throws AnnotatorException - If hashing algorithm not found,
+     *                            or if an unknown exception was thrown
      */
     private final void initHashProvider(HashType hashType) throws AnnotatorException {
         try {
-             this.hashProvider = new HashProviderFactory().getProvider(hashType);
+            this.hashProvider = new HashProviderFactory().getProvider(hashType);
         } catch (HashTypeException e) {
             throw new AnnotatorException("Hashing algorithm not found, could not hash data or generate checksum", e);
         } catch (Exception e) {
@@ -135,6 +99,7 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
 
     /**
      * Recursively gets all files in a directory as a list of absolute paths
+     *
      * @param path
      * @return List<String> of all files in directory
      */
@@ -160,7 +125,8 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
     }
 
     /**
-     * Reads and hashes a file on the local file system in in chunks of 8KB 
+     * Reads and hashes a file on the local file system in in chunks of 8KB
+     *
      * @param filePath
      * @return hash of the file's contents in string format
      * @throws AnnotatorException - When bad file path or corrupted file given
@@ -181,17 +147,17 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
             fs.close();
         } catch (OutOfMemoryError e) {
             throw new AnnotatorException(
-                "Failed to read file due to size larger than 2GB, could not validate checksum" + e
+                    "Failed to read file due to size larger than 2GB, could not validate checksum" + e
             );
         } catch (IOException e) {
             throw new AnnotatorException(
-                "Failed to read file contents, could not generate checksum", 
-                e
+                    "Failed to read file contents, could not generate checksum",
+                    e
             );
         } catch (SecurityException e) {
             throw new AnnotatorException(
-                "Insufficient permission to access file, could not validate checksum",
-                e
+                    "Insufficient permission to access file, could not validate checksum",
+                    e
             );
         } catch (Exception e) {
             throw new AnnotatorException("Could not validate checksum", e);
@@ -202,13 +168,14 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
     /**
      * Computes the hash of all files hashes and their corresponding paths in the specified directory and returns the
      * hash value as a string.
+     *
      * @param path the path of the directory to hash
      * @return the hash value of the directory as a string
      * @throws AnnotatorException if an error occurs while hashing the directory
      */
     private String generateChecksum(String path) throws AnnotatorException {
         List<String> filePaths = getAllFiles(path);
-        for(int i = 0 ; i<filePaths.size();i++){
+        for (int i = 0; i < filePaths.size(); i++) {
             String hashThenPath = readAndHashFile(filePaths.get(i)) + "  " + filePaths.get(i);
             filePaths.set(i, hashThenPath);
         }
@@ -218,5 +185,5 @@ class SourceCodeAnnotator extends AbstractAnnotator implements Annotator {
         final String sourceCodeChecksum = this.hashProvider.derive(hashesAndFiles.getBytes());
 
         return sourceCodeChecksum;
-     }
+    }
 }

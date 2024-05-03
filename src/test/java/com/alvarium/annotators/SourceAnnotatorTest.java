@@ -64,14 +64,13 @@ public class SourceAnnotatorTest {
     final Logger logger = LogManager.getRootLogger();
     Configurator.setRootLevel(Level.DEBUG);
 
-    final Annotator annotator = annotatorFactory.getAnnotator(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = annotatorFactory.getAnnotator(annotatorInfo, config, logger);
 
     // dummy data and empty prop bag
     final byte[] data = "test data".getBytes();
     final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<String, Object>());
 
-    final Annotation annotation = annotator.execute(ctx, data);
-    System.out.println(annotation.toJson());
+    assert annotator.isSatisfied(ctx, data);
   }
 
 }

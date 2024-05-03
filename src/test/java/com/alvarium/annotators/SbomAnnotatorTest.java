@@ -39,65 +39,63 @@ import org.junit.Test;
 
 public class SbomAnnotatorTest {
 
-  @Test
-  public void executeShouldReturnSatisfiedAnnotation() throws Exception {
-    final String json = "{\"kind\":\"sbom\",\"type\":\"spdx\",\"version\":\"SPDX-2.2\"}";
-    final Annotator annotator = this.getAnnotator(json);
+    @Test
+    public void executeShouldReturnSatisfiedAnnotation() throws Exception {
+        final String json = "{\"kind\":\"sbom\",\"type\":\"spdx\",\"version\":\"SPDX-2.2\"}";
+        final EnvironmentChecker annotator = this.getAnnotator(json);
 
-    // dummy data and empty prop bag
-    final byte[] data = "test data".getBytes();
-    HashMap<String, Object> map = new HashMap<String, Object>();
-    map.put(
-        AnnotationType.SBOM.name(), 
-        "./src/test/java/com/alvarium/annotators/sbom/spdx-valid.json"
-    );
-    final PropertyBag ctx = new ImmutablePropertyBag(map);
-    final Annotation annotation = annotator.execute(ctx, data);      
-    assert annotation.getIsSatisfied();
-  }
+        // dummy data and empty prop bag
+        final byte[] data = "test data".getBytes();
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put(
+                AnnotationType.SBOM.name(),
+                "./src/test/java/com/alvarium/annotators/sbom/spdx-valid.json"
+        );
+        final PropertyBag ctx = new ImmutablePropertyBag(map);
+        assert annotator.isSatisfied(ctx, data);
+    }
 
-  @Test
-  public void executeShouldReturnUnsatisfiedAnnotation() throws Exception {
-    // provided spdx is version SPDX-2.3, config provides SPDX-2.2 so annotation should fail
-    final String json = "{\"kind\":\"sbom\",\"type\":\"spdx\",\"version\":\"SPDX-2.3\"}";
-    final Annotator annotator = this.getAnnotator(json);    final byte[] data = "test data".getBytes();
-    HashMap<String, Object> map = new HashMap<String, Object>();
-    map.put(
-        AnnotationType.SBOM.name(), 
-        "./src/test/java/com/alvarium/annotators/sbom/spdx-valid.json"
-    );
-    final PropertyBag ctx = new ImmutablePropertyBag(map);
-    final Annotation annotation = annotator.execute(ctx, data);      
-    assert !annotation.getIsSatisfied();
-  }
+    @Test
+    public void executeShouldReturnUnsatisfiedAnnotation() throws Exception {
+        // provided spdx is version SPDX-2.3, config provides SPDX-2.2 so annotation should fail
+        final String json = "{\"kind\":\"sbom\",\"type\":\"spdx\",\"version\":\"SPDX-2.3\"}";
+        final EnvironmentChecker annotator = this.getAnnotator(json);
+        final byte[] data = "test data".getBytes();
+        HashMap<String, Object> map = new HashMap<String, Object>();
+        map.put(
+                AnnotationType.SBOM.name(),
+                "./src/test/java/com/alvarium/annotators/sbom/spdx-valid.json"
+        );
+        final PropertyBag ctx = new ImmutablePropertyBag(map);
+        assert !annotator.isSatisfied(ctx, data);
+    }
 
-  private Annotator getAnnotator(String cfg) throws AnnotatorException {
-    final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
-    final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
-        SignType.Ed25519);
-    final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
-        SignType.Ed25519);
-    final SignatureInfo sigInfo = new SignatureInfo(pubKey, privKey);
+    private EnvironmentChecker getAnnotator(String cfg) throws AnnotatorException {
+        final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
+        final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
+                SignType.Ed25519);
+        final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
+                SignType.Ed25519);
+        final SignatureInfo sigInfo = new SignatureInfo(pubKey, privKey);
 
-    final Gson gson = new GsonBuilder()
-        .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
-        .create();
-        
-      
-    final AnnotatorConfig annotatorInfo = gson.fromJson(
-        cfg, 
-        AnnotatorConfig.class
-    ); 
+        final Gson gson = new GsonBuilder()
+                .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
+                .create();
 
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
 
-    // init logger
-    final Logger logger = LogManager.getRootLogger();
-    Configurator.setRootLevel(Level.DEBUG);
+        final AnnotatorConfig annotatorInfo = gson.fromJson(
+                cfg,
+                AnnotatorConfig.class
+        );
 
-    final Annotator annotator = annotatorFactory.getAnnotator(annotatorInfo, config, logger);
-    return annotator;
-  }
+        final AnnotatorConfig[] annotators = {annotatorInfo};
+        final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
+
+        // init logger
+        final Logger logger = LogManager.getRootLogger();
+        Configurator.setRootLevel(Level.DEBUG);
+
+        return annotatorFactory.getAnnotator(annotatorInfo, config, logger);
+    }
 
 }
