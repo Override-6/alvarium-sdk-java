@@ -15,6 +15,7 @@
 package com.alvarium.contracts;
 
 
+import com.alvarium.serializers.AnnotationConverter;
 import com.alvarium.serializers.InstantConverter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -77,12 +78,13 @@ public class Annotation implements Serializable {
      */
     public String toJson() {
         Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Annotation.class, new AnnotationConverter())
                 .create();
         return gson.toJson(this, Annotation.class);
     }
 
     /**
-     * instaniates an Annotation object from a json representation
+     * instantiates an Annotation object from a json representation
      *
      * @param json input JSON string
      * @return Annotation Object
@@ -95,6 +97,10 @@ public class Annotation implements Serializable {
 
     /**
      * Returns an identity string, two annotations that are equals should also return the same identityString.
+     * two annotations that have the same identityString should also be equals.
+     * <p>
+     *     a.identityString().equals(b.identityString()) <=> a.equals(b)
+     * </p>
      */
     public String identityString() {
         return id +

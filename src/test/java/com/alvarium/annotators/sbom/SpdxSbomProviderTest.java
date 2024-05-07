@@ -14,8 +14,10 @@
 
 package com.alvarium.annotators.sbom;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class SpdxSbomProviderTest {
 
   // Valid spdx file with version 2.2

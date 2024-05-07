@@ -1,8 +1,16 @@
 package com.alvarium.contracts;
 
+import com.alvarium.PublishWrapper;
 import com.alvarium.annotators.AnnotatorException;
+import com.alvarium.serializers.AnnotationConverter;
+import com.alvarium.serializers.PublishWrapperConverter;
+import com.alvarium.serializers.SignedAnnotationBundleConverter;
+import com.alvarium.serializers.ZonedDateTimeConverter;
 import com.alvarium.sign.SignException;
 import com.alvarium.sign.SignProvider;
+import com.google.gson.GsonBuilder;
+
+import java.time.ZonedDateTime;
 
 public class AnnotationSigner {
 
@@ -17,7 +25,8 @@ public class AnnotationSigner {
                                                     AnnotationBundle bundle) throws
             AnnotatorException {
         try {
-            byte[] signed = getBundleMinimizedString(bundle).getBytes();
+            byte[] signed = getBundleIdentityString(bundle).getBytes();
+//            byte[] signed = getBundleJsonString(bundle).getBytes();
             String signature = provider.sign(signed);
             return new SignedAnnotationBundle(signature, bundle);
         } catch (SignException e) {
@@ -25,8 +34,7 @@ public class AnnotationSigner {
         }
     }
 
-    //TODO ask: is it possible to sign a hash instead ?
-    private static String getBundleMinimizedString(AnnotationBundle bundle) {
+    private static String getBundleIdentityString(AnnotationBundle bundle) {
         var sb = new StringBuilder();
         sb.append(bundle.key())
                 .append(bundle.hash())
@@ -39,4 +47,16 @@ public class AnnotationSigner {
 
         return sb.toString();
     }
+//
+//    private static String getBundleJsonString(AnnotationBundle bundle) {
+//        var gson = new GsonBuilder()
+//                .registerTypeAdapter(PublishWrapper.class, new PublishWrapperConverter())
+//                .registerTypeAdapter(SignedAnnotationBundle.class, new SignedAnnotationBundleConverter())
+//                .registerTypeAdapter(ZonedDateTime.class, new ZonedDateTimeConverter())
+//                .registerTypeAdapter(Annotation.class, new AnnotationConverter())
+//                .disableHtmlEscaping()
+//                .create();
+//
+//        return gson.toJson(bundle);
+//    }
 }

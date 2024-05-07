@@ -16,26 +16,26 @@ package com.alvarium;
 
 import com.alvarium.contracts.Annotation;
 import com.alvarium.contracts.SignedAnnotationBundle;
-import com.alvarium.serializers.*;
+import com.alvarium.serializers.AnnotationConverter;
+import com.alvarium.serializers.PublishWrapperConverter;
+import com.alvarium.serializers.SignedAnnotationBundleConverter;
+import com.alvarium.serializers.ZonedDateTimeConverter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 
 import java.io.Serializable;
-import java.time.Instant;
 import java.time.ZonedDateTime;
-import java.util.Base64;
 
 /**
  * A java bean that encapsulates the content sent through the stream providers
  * and appends the required metadata
  */
-public class PublishWrapper implements Serializable {
+public class PublishWrapper<C> implements Serializable {
     private final SdkAction action;
     private final String messageType;
-    private final Object content;
+    private final C content;
 
-    public PublishWrapper(SdkAction action, String messageType, Object content) {
+    public PublishWrapper(SdkAction action, String messageType, C content) {
         this.action = action;
         this.messageType = messageType;
         this.content = content;
@@ -49,7 +49,7 @@ public class PublishWrapper implements Serializable {
         return messageType;
     }
 
-    public Object getContent() {
+    public C getContent() {
         return content;
     }
 
@@ -61,30 +61,7 @@ public class PublishWrapper implements Serializable {
             .disableHtmlEscaping()
             .create();
 
-    /**
-     * The content field in the returned JSON will be Base64 string encoded
-     *
-     * @return String representation of the PublishWrapper JSON
-     */
     public String toJson() {
-
-        // Change the content field to a base64 encoded string before serializing to json
-        final JsonElement decodedContent = GSON.toJsonTree(this.content);
-        final String encodedContent;
-
-        // `toString()` will work if the content is a primitive type, but will add additional
-        // quotes (e.g. "foo" will be "\"foo\"") but `getAsString()` will produce correct behavior but
-        // using `getAsString()` on a non-primitive type will throw an exception.
-        // This condition ensures that the correct method is called on the correct type
-        if (decodedContent.isJsonPrimitive()) {
-            encodedContent = Base64.getEncoder().encodeToString(decodedContent.getAsString().getBytes());
-        } else {
-            encodedContent = Base64.getEncoder().encodeToString(decodedContent.toString().getBytes());
-        }
-
-        // new publish wrapper returned as JSON string with encoded content
-        // to prevent setting the object content value
-        final PublishWrapper wrapper = new PublishWrapper(action, messageType, encodedContent);
-        return GSON.toJson(wrapper);
+        return GSON.toJson(this);
     }
 }
