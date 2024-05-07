@@ -12,17 +12,26 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  *******************************************************************************/
-package com.alvarium.sign;
+package com.alvarium.serializers;
 
-public class SignProviderFactory {
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
-  public SignProvider getProvider(byte[] privateKey, SignType type) throws SignException {
-    switch(type) {
-      case Ed25519: 
-        return new Ed25519Provider(privateKey);
-      default:
-        throw new SignException("Concrete type not found: " + type.toString(), null);
+import java.lang.reflect.Type;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * A converter of Instant datatype to RFC3339 string representation and vice versa
+ */
+public class ZonedDateTimeConverter implements JsonSerializer<ZonedDateTime> {
+
+
+    public JsonElement serialize(ZonedDateTime src, Type typeOfSrc, JsonSerializationContext context) {
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(src.getZone());
+        return new JsonPrimitive(formatter.format(src));
     }
-  }
 
 }

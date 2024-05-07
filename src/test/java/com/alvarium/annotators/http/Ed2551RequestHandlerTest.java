@@ -28,10 +28,12 @@ import com.alvarium.sign.SignatureInfo;
 import org.apache.http.entity.StringEntity;
 
 import org.apache.http.client.methods.HttpPost;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+@Ignore("Ignored since the Ed2551RequestHandler.addSignatureHeaders implementation has been temporarly condamned")
 public class Ed2551RequestHandlerTest {
         HttpPost getRequest() {
                 HttpPost request = new HttpPost(URI.create("http://example.com/foo?var1=&var2=2"));

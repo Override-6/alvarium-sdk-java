@@ -15,85 +15,89 @@
 package com.alvarium.sign;
 
 
-import org.junit.Test;  
-import static org.junit.Assert.*;
+import com.alvarium.utils.Encoder;
+import com.google.crypto.tink.subtle.Ed25519Sign;
+import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import com.alvarium.utils.Encoder;
-import com.google.crypto.tink.subtle.Ed25519Sign;
+import static org.junit.Assert.assertEquals;
 
 public class SignProviderTest {
 
-  @Test(expected = SignException.class)
-  public void factoryShouldReturnNoConcreteTypesError() throws SignException {
-    final SignProviderFactory factory = new SignProviderFactory();
-    factory.getProvider(SignType.none);   
-  }
+    @Test(expected = SignException.class)
+    public void factoryShouldReturnNoConcreteTypesError() throws SignException, IOException {
+        final SignProviderFactory factory = new SignProviderFactory();
+        String key = Files.readString(Paths.get("./src/test/java/com/alvarium/sign/private.key"), StandardCharsets.US_ASCII);
+        factory.getProvider(Encoder.hexToBytes(key), SignType.none);
+    }
 
-  @Test
-  public void factoryShouldReturnEd25519() throws SignException {
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider ed25519Provider = factory.getProvider(SignType.Ed25519);
-    assertEquals(ed25519Provider.getClass(), Ed25519Provider.class);
-  }
+    @Test
+    public void factoryShouldReturnEd25519() throws SignException, IOException {
+        final SignProviderFactory factory = new SignProviderFactory();
+        String key = Files.readString(Paths.get("./src/test/java/com/alvarium/sign/private.key"), StandardCharsets.US_ASCII);
+        final SignProvider ed25519Provider = factory.getProvider(Encoder.hexToBytes(key), SignType.Ed25519);
+        assertEquals(ed25519Provider.getClass(), Ed25519Provider.class);
+    }
 
-  @Test
-  public void signAndVerifyShouldVerifyTrue()  throws Exception {
-    final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final byte[] privateKey = keyPair.getPrivateKey();
-    final byte[] publicKey = keyPair.getPublicKey();
-  
-    byte[] content = "hello".getBytes();
+    @Test
+    public void signAndVerifyShouldVerifyTrue() throws Exception {
+        final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final byte[] privateKey = keyPair.getPrivateKey();
+        final byte[] publicKey = keyPair.getPublicKey();
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
+        byte[] content = "hello".getBytes();
 
-    final String signedString = signProvider.sign(privateKey, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(publicKey, content, signed);
-  }
+        final SignProviderFactory factory = new SignProviderFactory();
 
-  @Test(expected = SignException.class)
-  public void signAndVerifyShouldVerifyFalse() throws Exception {
-    final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final Ed25519Sign.KeyPair wrongKeyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final byte[] privateKey = keyPair.getPrivateKey();
-    final byte[] wrongPublicKey = wrongKeyPair.getPublicKey();
+        final SignProvider signProvider = factory.getProvider(privateKey, SignType.Ed25519);
 
-    byte[] content = "foo".getBytes();
+        final String signedString = signProvider.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        signProvider.verify(publicKey, content, signed);
+    }
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
+    @Test(expected = SignException.class)
+    public void signAndVerifyShouldVerifyFalse() throws Exception {
+        final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final Ed25519Sign.KeyPair wrongKeyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final byte[] privateKey = keyPair.getPrivateKey();
+        final byte[] wrongPublicKey = wrongKeyPair.getPublicKey();
 
-    final String signedString = signProvider.sign(privateKey, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(wrongPublicKey, content, signed);    
-  }
+        byte[] content = "foo".getBytes();
 
-  @Test
-  public void signWithProvidedKeyFilesShouldVerifyTrue() throws Exception {
-    
-    // Load keys from files
-    String pirvateKeyPath = "./src/test/java/com/alvarium/sign/private.key";
-    String publicKeyPath = "./src/test/java/com/alvarium/sign/public.key";
-    final String privateKey = Files.readString(Paths.get(pirvateKeyPath), StandardCharsets.US_ASCII);
-    final String publicKey = Files.readString(Paths.get(publicKeyPath), StandardCharsets.US_ASCII);
+        final SignProviderFactory factory = new SignProviderFactory();
+        final SignProvider signProvider = factory.getProvider(privateKey, SignType.Ed25519);
 
-    // Decode keys into bytes
-    final byte[] privateKeyDecoded = Encoder.hexToBytes(privateKey);
-    final byte[] publicKeyDecoded = Encoder.hexToBytes(publicKey);
+        final String signedString = signProvider.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        signProvider.verify(wrongPublicKey, content, signed);
+    }
 
-    byte[] content = "foo".getBytes();
+    @Test
+    public void signWithProvidedKeyFilesShouldVerifyTrue() throws Exception {
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
+        // Load keys from files
+        String pirvateKeyPath = "./src/test/java/com/alvarium/sign/private.key";
+        String publicKeyPath = "./src/test/java/com/alvarium/sign/public.key";
+        final String privateKey = Files.readString(Paths.get(pirvateKeyPath), StandardCharsets.US_ASCII);
+        final String publicKey = Files.readString(Paths.get(publicKeyPath), StandardCharsets.US_ASCII);
 
-    final String signedString = signProvider.sign(privateKeyDecoded, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(publicKeyDecoded, content, signed);
-  }
+        // Decode keys into bytes
+        final byte[] privateKeyDecoded = Encoder.hexToBytes(privateKey);
+        final byte[] publicKeyDecoded = Encoder.hexToBytes(publicKey);
+
+        byte[] content = "foo".getBytes();
+
+        final SignProviderFactory factory = new SignProviderFactory();
+        final SignProvider signProvider = factory.getProvider(privateKeyDecoded, SignType.Ed25519);
+
+        final String signedString = signProvider.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        signProvider.verify(publicKeyDecoded, content, signed);
+    }
 
 }

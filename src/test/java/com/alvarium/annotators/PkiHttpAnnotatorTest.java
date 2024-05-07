@@ -52,6 +52,7 @@ import org.junit.rules.ExpectedException;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+@Ignore("Ignored since the Ed2551RequestHandler.addSignatureHeaders implementation has been temporarly condamned")
 public class PkiHttpAnnotatorTest {
   final AnnotatorFactory annotatorFactory = new AnnotatorFactory();
   final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",

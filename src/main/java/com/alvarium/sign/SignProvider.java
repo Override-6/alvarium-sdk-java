@@ -22,12 +22,12 @@ public interface SignProvider {
    * the public key (Some implementations will accept and use only the first 32-bytes of the
    * private key such as Ed25519)
    *  
-   * @param key
+//   * @param key
    * @param content
    * @return signature
    * @throws SignException
    */
-  String sign(byte[] key, byte[] content) throws SignException;
+  String sign(byte[] content) throws SignException;
 
   /**
    * Verifies a signature against content using a public key

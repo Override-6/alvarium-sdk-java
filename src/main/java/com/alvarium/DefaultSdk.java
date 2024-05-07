@@ -19,18 +19,24 @@ import com.alvarium.contracts.*;
 import com.alvarium.hash.HashProvider;
 import com.alvarium.hash.HashProviderFactory;
 import com.alvarium.hash.HashType;
-import com.alvarium.hash.HashTypeException;
+import com.alvarium.sign.SignProvider;
+import com.alvarium.sign.SignProviderFactory;
+import com.alvarium.sign.SignType;
 import com.alvarium.sign.SignatureInfo;
 import com.alvarium.streams.StreamException;
 import com.alvarium.streams.StreamProvider;
 import com.alvarium.streams.StreamProviderFactory;
+import com.alvarium.utils.Encoder;
 import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,7 +53,10 @@ public class DefaultSdk implements Sdk {
     private final LayerType layer;
     private final HashProvider hashProvider;
 
+    private final SignProvider signProvider;
+
     private static final String HOST_NAME;
+
 
     static {
         try {
@@ -64,7 +73,7 @@ public class DefaultSdk implements Sdk {
     // which is instrumental in tracing the impact on the current layer's score from the lower layers.
     public static final String TAG_ENV_KEY = "TAG";
 
-    public DefaultSdk(EnvironmentCheckerEntry[] checkers, SdkInfo config, Logger logger) throws StreamException, HashTypeException {
+    public DefaultSdk(EnvironmentCheckerEntry[] checkers, SdkInfo config, Logger logger) throws Exception {
         this.checkers = checkers;
         this.config = config;
         this.logger = logger;
@@ -72,6 +81,9 @@ public class DefaultSdk implements Sdk {
         this.signature = config.getSignature();
         this.layer = config.getLayer();
         this.hashProvider = new HashProviderFactory().getProvider(hash);
+
+        String key = Files.readString(Paths.get(signature.getPrivateKey().getPath()), StandardCharsets.US_ASCII);
+        this.signProvider = new SignProviderFactory().getProvider(Encoder.hexToBytes(key), SignType.Ed25519);
 
 
         // init stream
@@ -176,7 +188,7 @@ public class DefaultSdk implements Sdk {
             annotations.add(createAnnotation(entry.type(), entry.checker(), properties, tag, data));
         }
 
-        return new AnnotationBundle(annotations, key, hash, layer, Instant.now());
+        return new AnnotationBundle(annotations, key, hash, layer, ZonedDateTime.now());
     }
 
     private Annotation createAnnotation(AnnotationType type, EnvironmentChecker checker, PropertyBag bag, String tag, byte[] data) {
@@ -205,7 +217,7 @@ public class DefaultSdk implements Sdk {
 
         SignedAnnotationBundle signedBundle;
         try {
-            signedBundle = AnnotationSigner.signBundle(signature.getPrivateKey(), bundle);
+            signedBundle = AnnotationSigner.signBundle(signProvider, bundle);
         } catch (AnnotatorException e) {
             throw new RuntimeException(e); //FIXME got lazy to handle it
         }

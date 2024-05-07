@@ -34,13 +34,15 @@ import com.google.gson.JsonSerializer;
 public class InstantConverter implements JsonSerializer<Instant>, JsonDeserializer<Instant>{
 
   public JsonElement serialize(Instant src, Type typeOfSrc, JsonSerializationContext context) {
-    // a workaround to preserve the zone information 
+    // a workaround to preserve the zone information
     DateTimeFormatter f = DateTimeFormatter.ISO_INSTANT.withZone(ZoneId.systemDefault());
     ZonedDateTime zdt = ZonedDateTime.parse(DateTimeFormatter.ISO_INSTANT.format(src), f);
     String raw = zdt.toString();
 
-    if (raw.indexOf('[') > 0) {
-      return new JsonPrimitive(zdt.toString().substring(0, raw.indexOf('[')));
+    int idx = raw.indexOf('[');
+
+    if (idx > 0) {
+      return new JsonPrimitive(raw.substring(0, idx));
     }
     return new JsonPrimitive(raw);
   }

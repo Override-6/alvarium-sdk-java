@@ -14,16 +14,17 @@
  *******************************************************************************/
 package com.alvarium;
 
-import java.io.Serializable;
-import java.time.Instant;
-import java.util.Base64;
-
 import com.alvarium.contracts.Annotation;
-import com.alvarium.serializers.AnnotationConverter;
-import com.alvarium.serializers.InstantConverter;
+import com.alvarium.contracts.SignedAnnotationBundle;
+import com.alvarium.serializers.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+
+import java.io.Serializable;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.util.Base64;
 
 /**
  * A java bean that encapsulates the content sent through the stream providers
@@ -52,20 +53,23 @@ public class PublishWrapper implements Serializable {
         return content;
     }
 
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(PublishWrapper.class, new PublishWrapperConverter())
+            .registerTypeAdapter(SignedAnnotationBundle.class, new SignedAnnotationBundleConverter())
+            .registerTypeAdapter(ZonedDateTime.class, new ZonedDateTimeConverter())
+            .registerTypeAdapter(Annotation.class, new AnnotationConverter())
+            .disableHtmlEscaping()
+            .create();
+
     /**
      * The content field in the returned JSON will be Base64 string encoded
      *
      * @return String representation of the PublishWrapper JSON
      */
     public String toJson() {
-        Gson gson = new GsonBuilder()
-                .registerTypeAdapter(Annotation.class, new AnnotationConverter())
-                .registerTypeAdapter(Instant.class, new InstantConverter())
-                .disableHtmlEscaping()
-                .create();
 
         // Change the content field to a base64 encoded string before serializing to json
-        final JsonElement decodedContent = gson.toJsonTree(this.content);
+        final JsonElement decodedContent = GSON.toJsonTree(this.content);
         final String encodedContent;
 
         // `toString()` will work if the content is a primitive type, but will add additional
@@ -81,6 +85,6 @@ public class PublishWrapper implements Serializable {
         // new publish wrapper returned as JSON string with encoded content
         // to prevent setting the object content value
         final PublishWrapper wrapper = new PublishWrapper(action, messageType, encodedContent);
-        return gson.toJson(wrapper);
+        return GSON.toJson(wrapper);
     }
 }

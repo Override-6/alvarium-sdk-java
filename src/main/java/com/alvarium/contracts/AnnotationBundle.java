@@ -2,7 +2,11 @@ package com.alvarium.contracts;
 
 import com.alvarium.hash.HashType;
 
-import java.time.Instant;
+import java.time.ZonedDateTime;
 
-public record AnnotationBundle(Iterable<Annotation> annotations, String key, HashType hash, LayerType layer, Instant timestamp) {
+public record AnnotationBundle(Iterable<Annotation> annotations,
+                               String key,
+                               HashType hash,
+                               LayerType layer,
+                               ZonedDateTime timestamp) {
 }

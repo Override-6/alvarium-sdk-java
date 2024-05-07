@@ -78,7 +78,7 @@ public class SdkTest {
     }
 
     @Test
-    public void instantiateSdkShouldNotThrow() throws AnnotatorException, StreamException, HashTypeException {
+    public void instantiateSdkShouldNotThrow() throws Exception {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
@@ -110,7 +110,7 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldCreateAnnotations() throws AnnotatorException, StreamException, HashTypeException {
+    public void defaultSdkShouldCreateAnnotations() throws Exception {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
@@ -136,8 +136,7 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldCreateTransitionAnnotations() throws AnnotatorException,
-            StreamException, HashTypeException {
+    public void defaultSdkShouldCreateTransitionAnnotations() throws Exception {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
@@ -163,7 +162,7 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldMutateData() throws AnnotatorException, StreamException, HashTypeException {
+    public void defaultSdkShouldMutateData() throws Exception {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
@@ -191,8 +190,7 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldCreatePublishedAnnotations() throws AnnotatorException,
-            StreamException, HashTypeException {
+    public void defaultSdkShouldCreatePublishedAnnotations() throws Exception {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators

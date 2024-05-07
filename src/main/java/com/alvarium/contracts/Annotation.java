@@ -15,15 +15,13 @@
 package com.alvarium.contracts;
 
 
-import java.io.Serializable;
-import java.time.Instant;
-
-import com.alvarium.hash.HashType;
 import com.alvarium.serializers.InstantConverter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import de.huxhorn.sulky.ulid.ULID;
+import java.io.Serializable;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * A java bean that encapsulates all of the data related to a specific annotation.
@@ -42,8 +40,9 @@ public class Annotation implements Serializable {
 
 
     public Annotation(AnnotationType kind, boolean isSatisfied, String tag) {
-        ULID ulid = new ULID();
-        this.id = ulid.nextULID();
+//        ULID ulid = new ULID();
+//        this.id = ulid.nextULID();
+        this.id = UUID.randomUUID().toString();
         this.tag = tag;
         this.kind = kind;
         this.isSatisfied = isSatisfied;
@@ -77,7 +76,8 @@ public class Annotation implements Serializable {
      * @return json string representation
      */
     public String toJson() {
-        Gson gson = new GsonBuilder().create();
+        Gson gson = new GsonBuilder()
+                .create();
         return gson.toJson(this, Annotation.class);
     }
 
