@@ -22,14 +22,14 @@ import com.alvarium.PublishWrapper;
  */
 class MockStreamProvider implements StreamProvider {
   public void connect() {
-    System.out.println("stream connected");
+    //System.out.println("stream connected");
   }
   
   public void close() {
-    System.out.println("stream closed");
+    //System.out.println("stream closed");
   }
   
   public void publish(PublishWrapper wrapper) {
-    System.out.println(String.format("%s publish", wrapper.toJson()));
+    //System.out.println(String.format("%s publish", wrapper.toJson()));
   }
 }
