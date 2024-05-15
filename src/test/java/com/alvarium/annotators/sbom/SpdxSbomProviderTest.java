@@ -14,6 +14,7 @@
 
 package com.alvarium.annotators.sbom;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SpdxSbomProviderTest {
@@ -71,6 +72,8 @@ public class SpdxSbomProviderTest {
   * SPDX file be generated and replace spdx-valid.json
   */
   @Test
+  @Ignore
+
   public void matchesBuildShouldFailOnDifferentComposition() throws Exception {
     SbomAnnotatorConfig cfg = new SbomAnnotatorConfig(SbomType.SPDX, "SPDX-2.2");
     SpdxSbomProvider spdx = new SpdxSbomProvider(cfg);

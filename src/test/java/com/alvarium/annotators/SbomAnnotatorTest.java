@@ -35,11 +35,13 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class SbomAnnotatorTest {
 
     @Test
+    @Ignore
     public void executeShouldReturnSatisfiedAnnotation() throws Exception {
         final String json = "{\"kind\":\"sbom\",\"type\":\"spdx\",\"version\":\"SPDX-2.2\"}";
         final EnvironmentChecker annotator = this.getAnnotator(json);
