@@ -19,6 +19,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import com.alvarium.hash.HashType;
@@ -39,7 +40,7 @@ public class AnnotationListTest {
       AnnotationType.MOCK, 
       "signature", 
       true, 
-      Instant.now()
+      ZonedDateTime.now()
     );
     final AnnotationList annotations = new AnnotationList(List.of(annotation, annotation));
     System.out.println(annotations.toJson());

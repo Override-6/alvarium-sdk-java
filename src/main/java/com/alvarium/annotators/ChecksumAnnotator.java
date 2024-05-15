@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 
 import org.apache.logging.log4j.Logger;
 
@@ -87,7 +88,7 @@ public class ChecksumAnnotator extends AbstractAnnotator implements Annotator {
             this.kind, 
             null, 
             isSatisfied, 
-            Instant.now()
+            ZonedDateTime.now()
         );
 
         final String annotationSignature = super.signAnnotation(

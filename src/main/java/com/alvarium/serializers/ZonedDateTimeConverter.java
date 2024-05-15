@@ -14,10 +14,7 @@
  *******************************************************************************/
 package com.alvarium.serializers;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import com.google.gson.*;
 
 import java.lang.reflect.Type;
 import java.time.ZonedDateTime;
@@ -26,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * A converter of Instant datatype to RFC3339 string representation and vice versa
  */
-public class ZonedDateTimeConverter implements JsonSerializer<ZonedDateTime> {
+public class ZonedDateTimeConverter implements JsonSerializer<ZonedDateTime>, JsonDeserializer<ZonedDateTime> {
 
 
     public JsonElement serialize(ZonedDateTime src, Type typeOfSrc, JsonSerializationContext context) {
@@ -34,4 +31,8 @@ public class ZonedDateTimeConverter implements JsonSerializer<ZonedDateTime> {
         return new JsonPrimitive(formatter.format(src));
     }
 
+    @Override
+    public ZonedDateTime deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(json.getAsString(), ZonedDateTime::from);
+    }
 }

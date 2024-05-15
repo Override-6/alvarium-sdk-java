@@ -21,6 +21,7 @@ import java.io.RandomAccessFile;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 
 import org.apache.logging.log4j.Logger;
 
@@ -72,7 +73,7 @@ class TpmAnnotator extends AbstractAnnotator implements Annotator {
           kind,
           null,
           isSatisfied,
-          Instant.now());
+          ZonedDateTime.now());
     
     final String annotationSignature = super.signAnnotation(signature.getPrivateKey(), annotation);
     annotation.setSignature(annotationSignature);
