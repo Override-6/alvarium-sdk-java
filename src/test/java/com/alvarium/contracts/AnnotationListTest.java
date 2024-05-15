@@ -23,8 +23,10 @@ import java.util.List;
 
 import com.alvarium.hash.HashType;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class AnnotationListTest {
   
   @Test

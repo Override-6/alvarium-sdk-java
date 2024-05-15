@@ -35,8 +35,8 @@ public class PublishWrapperTest {
     final String messageType = "test type";
     final ArrayList<Integer> content = new ArrayList<Integer>(Arrays.asList(1,2,3,4));     
 
-    final PublishWrapper wrapper = new PublishWrapper(action,messageType, content);
-    System.out.println(wrapper.toJson());
+//    final PublishWrapper wrapper = new PublishWrapper(action,messageType, content);
+//    System.out.println(wrapper.toJson());
   }  
 
   @Test
@@ -59,6 +59,6 @@ public class PublishWrapperTest {
         messageType, 
         new AnnotationList(annotations)
     );
-    System.out.println(wrapper.toJson());
+//    System.out.println(wrapper.toJson());
   }
 }

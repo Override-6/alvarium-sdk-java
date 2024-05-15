@@ -20,6 +20,7 @@ import java.time.Instant;
 
 import com.alvarium.hash.HashType;
 import com.alvarium.serializers.InstantConverter;
+import com.alvarium.utils.Constants;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -38,7 +39,7 @@ public class Annotation implements Serializable {
   private final LayerType layer;
   private final AnnotationType kind;
   private String signature;
-  private final Boolean isSatisfied;
+  private final boolean isSatisfied;
   private final Instant timestamp;
   // TagEnvKey is an environment key used to associate annotations with specific metadata,
   // aiding in the linkage of scores across different layers of the stack. For instance, in the "app" layer,
@@ -114,9 +115,7 @@ public class Annotation implements Serializable {
      * @return json string representation
      */ 
     public String toJson() {
-      Gson gson = new GsonBuilder().registerTypeAdapter(Instant.class, new InstantConverter())
-          .create();
-      return gson.toJson(this, Annotation.class);
+      return Constants.GSON.toJson(this, Annotation.class);
     }
 
    /**
