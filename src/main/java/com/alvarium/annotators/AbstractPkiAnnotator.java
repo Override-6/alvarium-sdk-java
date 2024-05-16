@@ -31,12 +31,14 @@ abstract class AbstractPkiAnnotator extends AbstractAnnotator {
     final SignProviderFactory signFactory = new SignProviderFactory();
     final SignProvider signProvider;
     try {
-      signProvider = signFactory.getProvider(key.getType());
+      signProvider = signFactory.getProvider(key);
     } catch (SignException e) {
       throw new AnnotatorException("Could not instantiate signing provider", e);
+    } catch (IOException e) {
+        throw new RuntimeException(e);
     }
 
-    try {
+      try {
       // Load public key
       final String publicKeyPath = key.getPath();
       final String publicKey = Files.readString(

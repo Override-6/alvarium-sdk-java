@@ -13,6 +13,9 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
+import com.alvarium.sign.SignException;
+import com.alvarium.sign.SignProvider;
+import com.alvarium.sign.SignProviderFactory;
 import org.apache.logging.log4j.Logger;
 
 import com.alvarium.SdkInfo;
@@ -22,42 +25,52 @@ import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashType;
 import com.alvarium.sign.SignatureInfo;
 
+import java.io.IOException;
+
 public class AnnotatorFactory {
 
-  public Annotator getAnnotator(AnnotatorConfig cfg, SdkInfo config, Logger logger) throws AnnotatorException {
-    final HashType hash = config.getHash().getType();
-    final SignatureInfo signature = config.getSignature();
-    final LayerType layer = config.getLayer();
-    switch (cfg.getKind()) {
-      case MOCK:
+    public Annotator getAnnotator(AnnotatorConfig cfg, SdkInfo config, Logger logger) throws AnnotatorException {
+        final HashType hash = config.getHash().getType();
+        final SignatureInfo signature = config.getSignature();
+        final LayerType layer = config.getLayer();
+
+        SignProvider signer;
         try {
-            MockAnnotatorConfig mockCfg = MockAnnotatorConfig.class.cast(cfg);
-            return new MockAnnotator(mockCfg, hash, signature, layer);
-        } catch(ClassCastException e) {
-            throw new AnnotatorException("Invalid annotator config", e);
+            signer = new SignProviderFactory().getProvider(config.getSignature().getPrivateKey());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-      case TLS:
-        return new TlsAnnotator(hash, signature, logger, layer);
-      case PKI:
-        return new PkiAnnotator(hash, signature, logger, layer);
-      case PKIHttp:
-        return new PkiHttpAnnotator(hash, signature, logger, layer);
-      case TPM:
-        return new TpmAnnotator(hash, signature, logger, layer);
-      case SourceCode:
-        return new SourceCodeAnnotator(hash, signature, logger, layer);
-      case CHECKSUM:
-        return new ChecksumAnnotator(hash, signature, logger, layer);
-      case VULNERABILITY:
-        VulnerabilityAnnotatorConfig vulnCfg = VulnerabilityAnnotatorConfig.class.cast(cfg);
-        return new VulnerabilityAnnotator(vulnCfg, hash, signature, logger, layer);
-      case SOURCE:
-        return new SourceAnnotator(hash, signature, logger, layer);
-      case SBOM:
-        final SbomAnnotatorConfig sbomCfg = SbomAnnotatorConfig.class.cast(cfg);
-        return new SbomAnnotator(sbomCfg, hash, signature, logger, layer);
-      default:
-        throw new AnnotatorException("Annotator type is not supported");
+
+        switch (cfg.getKind()) {
+            case MOCK:
+                try {
+                    MockAnnotatorConfig mockCfg = MockAnnotatorConfig.class.cast(cfg);
+                    return new MockAnnotator(mockCfg, hash, signature, layer);
+                } catch (ClassCastException e) {
+                    throw new AnnotatorException("Invalid annotator config", e);
+                }
+            case TLS:
+                return new TlsAnnotator(hash, signature, logger, layer);
+            case PKI:
+                return new PkiAnnotator(hash, signature, logger, layer);
+            case PKIHttp:
+                return new PkiHttpAnnotator(hash, signature, logger, layer);
+            case TPM:
+                return new TpmAnnotator(hash, signature, logger, layer);
+            case SourceCode:
+                return new SourceCodeAnnotator(hash, signature, logger, layer);
+            case CHECKSUM:
+                return new ChecksumAnnotator(hash, signature, logger, layer);
+            case VULNERABILITY:
+                VulnerabilityAnnotatorConfig vulnCfg = VulnerabilityAnnotatorConfig.class.cast(cfg);
+                return new VulnerabilityAnnotator(vulnCfg, hash, signature, logger, layer);
+            case SOURCE:
+                return new SourceAnnotator(signer, hash, logger, layer);
+            case SBOM:
+                final SbomAnnotatorConfig sbomCfg = SbomAnnotatorConfig.class.cast(cfg);
+                return new SbomAnnotator(sbomCfg, hash, signature, logger, layer);
+            default:
+                throw new AnnotatorException("Annotator type is not supported");
+        }
     }
-  }
 }

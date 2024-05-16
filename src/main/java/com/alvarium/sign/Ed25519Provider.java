@@ -14,43 +14,38 @@
  *******************************************************************************/
 package com.alvarium.sign;
 
-import java.security.GeneralSecurityException;
-import java.util.Arrays;
-
 import com.alvarium.utils.Encoder;
 import com.google.crypto.tink.subtle.Ed25519Sign;
 import com.google.crypto.tink.subtle.Ed25519Verify;
 
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+
 
 public class Ed25519Provider implements SignProvider {
 
-  protected Ed25519Provider() {}
+  private final Ed25519Sign signer;
 
-  public String sign(byte[] key, byte[] content) throws SignException {
-    
-    // Private key passed as private key and public key appended to it
-    // so the private key of size 32-bytes is extracted 
+  protected Ed25519Provider(byte[] key) {
     final byte[] privateKey = Arrays.copyOfRange(key, 0, 32);
-
-    final Ed25519Sign signer;
-
     try {
-      signer = new Ed25519Sign(privateKey);
-    } catch(GeneralSecurityException e) {
-      throw new SignException("SHA-512 not defined in EngineFactory.MESSAGE_DIGEST", e);
-    } catch(IllegalArgumentException e) {
-      throw new SignException("Invalid signing key", e);
+      this.signer = new Ed25519Sign(privateKey);
+    } catch (GeneralSecurityException e) {
+      throw new RuntimeException("SHA-512 not defined in EngineFactory.MESSAGE_DIGEST", e);
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException("Invalid signing key", e);
     } catch (Exception e) {
-      throw new SignException("Could not instantiate Ed25519Provider", e);
+      throw new RuntimeException("Could not instantiate Ed25519Provider", e);
     }
+  }
 
+  public String sign(byte[] content) throws SignException {
+    // Private key passed as private key and public key appended to it
+    // so the private key of size 32-bytes is extracted
     try {
       final byte[] signed = signer.sign(content);
-      final String signedString = Encoder.bytesToHex(signed);
-      return signedString;
-    } catch(GeneralSecurityException e) {
-      throw new SignException("Could not sign data", e);
-    } catch(Exception e) {
+      return Encoder.bytesToHex(signed);
+    } catch (Exception e) {
       throw new SignException("Could not sign data", e);
     }
   }
@@ -59,9 +54,9 @@ public class Ed25519Provider implements SignProvider {
     try {
       final Ed25519Verify verifier = new Ed25519Verify(key);
       verifier.verify(signed, content);
-    } catch(GeneralSecurityException e) {
+    } catch (GeneralSecurityException e) {
       throw new SignException("Verification did not pass", e);
-    } catch(IllegalArgumentException e) {
+    } catch (IllegalArgumentException e) {
       throw new SignException("Invalid signing key", e);
     } catch (Exception e) {
       throw new SignException("Could not verify signature", e);

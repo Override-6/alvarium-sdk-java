@@ -14,14 +14,22 @@
  *******************************************************************************/
 package com.alvarium.sign;
 
+import com.alvarium.utils.Encoder;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 public class SignProviderFactory {
 
-  public SignProvider getProvider(SignType type) throws SignException {
-    switch(type) {
-      case Ed25519: 
-        return new Ed25519Provider();
+  public SignProvider getProvider(KeyInfo privateKey) throws SignException, IOException {
+    final String key = Files.readString(Paths.get(privateKey.getPath()), StandardCharsets.US_ASCII);
+    switch(privateKey.getType()) {
+      case Ed25519:
+        return new Ed25519Provider(Encoder.hexToBytes(key));
       default:
-        throw new SignException("Concrete type not found: " + type.toString(), null);
+        throw new SignException("Concrete type not found: " + privateKey.getType(), null);
     }
   }
 

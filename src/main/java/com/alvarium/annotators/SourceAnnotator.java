@@ -18,6 +18,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
 
+import com.alvarium.sign.SignProvider;
 import org.apache.logging.log4j.Logger;
 
 import com.alvarium.contracts.Annotation;
@@ -34,15 +35,15 @@ import com.alvarium.utils.PropertyBag;
 class SourceAnnotator extends AbstractAnnotator implements Annotator {
   private final HashType hash;
   private final AnnotationType kind;
-  private final SignatureInfo signatureInfo;
   private final LayerType layer;
+  private final SignProvider signer;
   
-  protected SourceAnnotator(HashType hash, SignatureInfo signatureInfo, Logger logger, LayerType layer) {
+  protected SourceAnnotator(SignProvider signer, HashType hash, Logger logger, LayerType layer) {
     super(logger);
     this.hash = hash;
     this.kind = AnnotationType.SOURCE;
-    this.signatureInfo = signatureInfo;
     this.layer = layer;
+    this.signer = signer;
   }  
 
   public Annotation execute(PropertyBag ctx, byte[] data) throws AnnotatorException {
@@ -65,7 +66,7 @@ class SourceAnnotator extends AbstractAnnotator implements Annotator {
     final Annotation annotation = new Annotation(key, this.hash, host, layer, this.kind, null, isSatisfied,
         Instant.now());
     
-    final String signature = super.signAnnotation(signatureInfo.getPrivateKey(), annotation);
+    final String signature = super.signAnnotation(signer, annotation);
     annotation.setSignature(signature);
     return annotation;
   } 
