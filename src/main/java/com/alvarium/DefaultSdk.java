@@ -126,7 +126,7 @@ public class DefaultSdk implements Sdk {
             add(sourceOriginAnnotation);
             newDataBundle.annotations().forEach(this::add);
         }};
-        AnnotationBundle bundle = new AnnotationBundle(annotationsMerged, newDataBundle.key(), newDataBundle.hash(), newDataBundle.layer(), newDataBundle.timestamp());
+        AnnotationBundle bundle = new AnnotationBundle(annotationsMerged, newDataBundle.key(), newDataBundle.host(), newDataBundle.hash(), newDataBundle.layer(), newDataBundle.timestamp());
 
         // publish to the stream provider
         this.publishAnnotations(SdkAction.MUTATE, bundle);
@@ -188,7 +188,7 @@ public class DefaultSdk implements Sdk {
             annotations.add(createAnnotation(entry.type(), entry.checker(), properties, tag, data));
         }
 
-        return new AnnotationBundle(annotations, key, hash, layer, ZonedDateTime.now());
+        return new AnnotationBundle(annotations, key, HOST_NAME, hash, layer, ZonedDateTime.now());
     }
 
     private Annotation createAnnotation(AnnotationType type, EnvironmentChecker checker, PropertyBag bag, String tag, byte[] data) {
