@@ -25,12 +25,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-class TpmAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+public class TpmChecker extends AbstractChecker implements EnvironmentChecker {
     private static final String DIRECT_TPM_PATH = "/dev/tpm0";
     private static final String TPM_KERNEL_MANAGED_PATH = "/dev/tpmrm0";
 
 
-    protected TpmAnnotator(HashType hash, SignatureInfo signature, Logger logger, LayerType layer) {
+    public TpmChecker(Logger logger) {
         super(logger);
     }
 

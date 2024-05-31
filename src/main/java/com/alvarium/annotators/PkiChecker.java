@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright 2023 Dell Inc.
+ * Copyright 2021 Dell Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,30 +14,30 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import com.alvarium.utils.ImmutablePropertyBag;
+import com.alvarium.sign.SignException;
+import com.alvarium.sign.SignatureVerifier;
+import com.alvarium.utils.Encoder;
 import com.alvarium.utils.PropertyBag;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.junit.Test;
 
-import java.util.HashMap;
+public class PkiChecker extends AbstractChecker implements EnvironmentChecker {
 
-public class TpmAnnotatorTest {
+    private final SignatureVerifier verifier;
 
-    @Test
-    public void executeShouldCreateAnnotation() throws AnnotatorException {
-        // init logger
-        final Logger logger = LogManager.getRootLogger();
-        Configurator.setRootLevel(Level.DEBUG);
+    public PkiChecker(Logger logger, SignatureVerifier verifier) {
+        super(logger);
+        this.verifier = verifier;
+    }
 
-        EnvironmentChecker tpm = new TpmChecker(logger);
-
-        PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());
-
-        byte[] data = {0x1, 0x2};
-        System.out.println("tpm.isSatisfied(ctx, data) = " + tpm.isSatisfied(ctx, data));
+    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
+        final Signable signable = Signable.fromJson(new String(data));
+        try {
+            verifier.verify(signable.getSeed().getBytes(), Encoder.hexToBytes(signable.getSignature()));
+        } catch (SignException e) {
+            logger.debug("could not verify signature", e);
+            return false;
+        }
+        return true;
     }
 
 }

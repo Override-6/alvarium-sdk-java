@@ -15,6 +15,7 @@
 
 package com.alvarium.annotators;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Date;
 import java.io.UnsupportedEncodingException;
@@ -29,9 +30,7 @@ import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashInfo;
 import com.alvarium.hash.HashType;
 import com.alvarium.serializers.AnnotatorConfigConverter;
-import com.alvarium.sign.KeyInfo;
-import com.alvarium.sign.SignType;
-import com.alvarium.sign.SignatureInfo;
+import com.alvarium.sign.*;
 import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
 import com.google.gson.Gson;
@@ -52,7 +51,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class PkiHttpAnnotatorTest {
-  final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
   final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
       SignType.Ed25519);
   final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
@@ -60,7 +58,7 @@ public class PkiHttpAnnotatorTest {
   final SignatureInfo sigInfo = new SignatureInfo(pubKey, privKey);
   final byte[] data = String.format("{key: \"test\"}").getBytes();
 
-  HttpPost getRequest(SignatureInfo sigInfo) throws RequestHandlerException {
+  private HttpPost getRequest(SignatureInfo sigInfo) throws RequestHandlerException, IOException, SignException {
     HttpPost request = new HttpPost(URI.create("http://example.com/foo?var1=&var2=2"));
     Date date = new Date();
     request.setHeader("Date", date.toString());
@@ -71,7 +69,7 @@ public class PkiHttpAnnotatorTest {
         DerivedComponent.AUTHORITY.getValue(),
         "Content-Type", "Content-Length" };
     Ed2551RequestHandler requestHandler = new Ed2551RequestHandler(request);
-    requestHandler.addSignatureHeaders(date, fields, sigInfo);
+    requestHandler.addSignatureHeaders(date, fields, SignProviderFactories.getSigner(sigInfo.getPrivateKey()), sigInfo.getPublicKey());
     return request;
   }
 
@@ -80,7 +78,7 @@ public class PkiHttpAnnotatorTest {
 
   @Test
   // Tests the Signature signed by the assembler
-  public void testAnnotationOK() throws AnnotatorException, RequestHandlerException {
+  public void testAnnotationOK() throws AnnotatorException, RequestHandlerException, IOException, SignException {
             // init logger
     final Logger logger = LogManager.getRootLogger();
     Configurator.setRootLevel(Level.DEBUG);
@@ -95,17 +93,14 @@ public class PkiHttpAnnotatorTest {
     map.put(AnnotationType.PKIHttp.name(), request);
     final PropertyBag ctx = new ImmutablePropertyBag(map);
 
-    final AnnotatorConfig annotatorInfo = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
 
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = new PkiHttpChecker(logger, sigInfo);
     assertTrue("isSatisfied should be true", annotator.isSatisfied(ctx, data));
   }
 
   @Test
-  public void testInvalidKeyType() throws AnnotatorException, RequestHandlerException {
-    final String signatureInput = "\"@method\" \"@path\" \"@authority\" \"Content-Type\" " + 
+  public void testInvalidKeyType() throws AnnotatorException, RequestHandlerException, IOException, SignException {
+    final String signatureInput = "\"@method\" \"@path\" \"@authority\" \"Content-Type\" " +
     "\"Content-Length\";created=1646146637;keyid=\"public.key\";alg=\"invalid\"";
 
             // init logger
@@ -127,17 +122,14 @@ public class PkiHttpAnnotatorTest {
     exceptionRule.expect(AnnotatorException.class);
     exceptionRule.expectMessage("Invalid key type invalid");
 
-    final AnnotatorConfig annotatorInfo = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = new PkiHttpChecker(logger, sigInfo);
     annotator.isSatisfied(ctx, data);
   }
 
   @Test
   @Ignore("I no more understand if an internal error in a annotator should return false or throw, this test seems to be in contradiction with the test above that expects the annotator to throw if there is an internal error. Why this specific case should be suppressed and return false ?")
-  public void testKeyNotFound() throws AnnotatorException, RequestHandlerException {
-    final String signatureInput = "\"@method\" \"@path\" \"@authority\" \"Content-Type\" " + 
+  public void testKeyNotFound() throws AnnotatorException, RequestHandlerException, IOException, SignException {
+    final String signatureInput = "\"@method\" \"@path\" \"@authority\" \"Content-Type\" " +
     "\"Content-Length\";created=1646146637;keyid=\"invalid\";alg=\"ed25519\"";
             // init logger
     final Logger logger = LogManager.getRootLogger();
@@ -156,16 +148,12 @@ public class PkiHttpAnnotatorTest {
     map.put(AnnotationType.PKIHttp.name(), request);
     final PropertyBag ctx = new ImmutablePropertyBag(map);
 
-
-    final AnnotatorConfig annotatorInfo = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = new PkiHttpChecker(logger, sigInfo);
     assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
   }
 
   @Test
-  public void testEmptySignature() throws AnnotatorException, RequestHandlerException {
+  public void testEmptySignature() throws AnnotatorException, RequestHandlerException, IOException, SignException {
     final String signature = "";
             // init logger
     final Logger logger = LogManager.getRootLogger();
@@ -183,16 +171,13 @@ public class PkiHttpAnnotatorTest {
     HashMap<String, Object> map = new HashMap<>();
     map.put(AnnotationType.PKIHttp.name(), request);
     final PropertyBag ctx = new ImmutablePropertyBag(map);
-    
-    final AnnotatorConfig annotatorInfo = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
+
+    final EnvironmentChecker annotator = new PkiHttpChecker(logger, sigInfo);
     assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
   }
 
   @Test
-  public void testInvalidSignature() throws AnnotatorException, RequestHandlerException {
+  public void testInvalidSignature() throws AnnotatorException, RequestHandlerException, IOException, SignException {
     final String signature = "invalid";
 
     HttpPost request = getRequest(sigInfo);
@@ -211,21 +196,7 @@ public class PkiHttpAnnotatorTest {
     map.put(AnnotationType.PKIHttp.name(), request);
     final PropertyBag ctx = new ImmutablePropertyBag(map);
 
-    final AnnotatorConfig annotatorInfo = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {annotatorInfo};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(annotatorInfo, config, logger);
+    final EnvironmentChecker annotator = new PkiHttpChecker(logger, sigInfo);
     assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
-  }
-
-  public AnnotatorConfig getAnnotatorCfg() {
-    final Gson gson = new GsonBuilder()
-      .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
-      .create();        
-    final String json = "{\"kind\": \"pki-http\"}";
-    return gson.fromJson(
-                json, 
-                AnnotatorConfig.class
-    ); 
   }
 }

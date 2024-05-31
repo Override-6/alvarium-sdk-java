@@ -16,45 +16,44 @@ package com.alvarium.annotators;
 import com.alvarium.SdkInfo;
 import com.alvarium.annotators.sbom.SbomAnnotatorConfig;
 import com.alvarium.annotators.vulnerability.VulnerabilityAnnotatorConfig;
-import com.alvarium.contracts.LayerType;
 import com.alvarium.hash.HashType;
 import com.alvarium.sign.SignatureInfo;
+import com.alvarium.sign.SignatureVerifier;
 import org.apache.logging.log4j.Logger;
 
 public class EnvironmentCheckerFactory {
 
-    public EnvironmentChecker getChecker(AnnotatorConfig cfg, SdkInfo config, Logger logger) throws AnnotatorException {
+    public static EnvironmentChecker getChecker(AnnotatorConfig cfg, SdkInfo config, Logger logger, SignatureVerifier verifier) throws AnnotatorException {
         final HashType hash = config.getHash().getType();
         final SignatureInfo signature = config.getSignature();
-        final LayerType layer = config.getLayer();
         switch (cfg.getKind()) {
             case MOCK:
                 try {
-                    MockAnnotatorConfig mockCfg = MockAnnotatorConfig.class.cast(cfg);
+                    MockAnnotatorConfig mockCfg = (MockAnnotatorConfig) cfg;
                     return new MockAnnotator(mockCfg);
                 } catch (ClassCastException e) {
                     throw new AnnotatorException("Invalid annotator config", e);
                 }
             case TLS:
-                return new TlsAnnotator(logger);
+                return new TlsChecker(logger);
             case PKI:
-                return new PkiAnnotator(signature, logger);
+                return new PkiChecker(logger, verifier);
             case PKIHttp:
-                return new PkiHttpAnnotator(signature, logger);
+                return new PkiHttpChecker(logger, signature);
             case TPM:
-                return new TpmAnnotator(hash, signature, logger, layer);
+                return new TpmChecker(logger);
             case SourceCode:
-                return new SourceCodeAnnotator(hash, logger);
+                return new SourceCodeChecker(hash, logger);
             case CHECKSUM:
-                return new ChecksumAnnotator(hash, logger);
+                return new ChecksumChecker(hash, logger);
             case VULNERABILITY:
-                VulnerabilityAnnotatorConfig vulnCfg = VulnerabilityAnnotatorConfig.class.cast(cfg);
-                return new VulnerabilityAnnotator(vulnCfg, hash, signature, logger, layer);
+                VulnerabilityAnnotatorConfig vulnCfg = (VulnerabilityAnnotatorConfig) cfg;
+                return new VulnerabilityChecker(vulnCfg, logger);
             case SOURCE:
-                return new SourceAnnotator(logger);
+                return new SourceChecker(logger);
             case SBOM:
                 final SbomAnnotatorConfig sbomCfg = (SbomAnnotatorConfig) cfg;
-                return new SbomAnnotator(sbomCfg, logger);
+                return new SbomChecker(sbomCfg, logger);
             default:
                 throw new AnnotatorException("Annotator type is not supported");
         }

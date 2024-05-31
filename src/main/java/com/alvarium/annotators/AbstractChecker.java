@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * Copyright 2021 Dell Inc.
  *
@@ -12,17 +11,22 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  *******************************************************************************/
-package com.alvarium.sign;
+package com.alvarium.annotators;
 
-public class SignProviderFactory {
+import org.apache.logging.log4j.Logger;
 
-  public SignProvider getProvider(SignType type) throws SignException {
-    switch(type) {
-      case Ed25519: 
-        return new Ed25519Provider();
-      default:
-        throw new SignException("Concrete type not found: " + type.toString(), null);
+/**
+ * A Util class responsible for carrying out common operations done by the annotators
+ */
+abstract class AbstractChecker implements EnvironmentChecker {
+
+    protected Logger logger;
+
+    AbstractChecker(Logger logger) {
+        this.logger = logger;
     }
-  }
 
+    public Logger getLogger() {
+        return logger;
+    }
 }

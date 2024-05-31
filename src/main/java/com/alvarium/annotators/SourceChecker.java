@@ -24,9 +24,9 @@ import java.net.UnknownHostException;
  * A unit used to provide lineage from one version of data to another as a result of
  * change or transformation
  */
-class SourceAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+public class SourceChecker extends AbstractChecker implements EnvironmentChecker {
 
-    protected SourceAnnotator(Logger logger) {
+    public SourceChecker(Logger logger) {
         super(logger);
     }
 

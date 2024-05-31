@@ -14,100 +14,68 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.util.HashMap;
-
-import com.alvarium.SdkInfo;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashInfo;
-import com.alvarium.hash.HashType;
-import com.alvarium.serializers.AnnotatorConfigConverter;
 import com.alvarium.sign.KeyInfo;
+import com.alvarium.sign.SignException;
+import com.alvarium.sign.SignProviderFactories;
 import com.alvarium.sign.SignType;
-import com.alvarium.sign.SignatureInfo;
 import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.HashMap;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class PkiAnnotatorTest {
 
-  
 
-  @Test
-  public void executeShouldGetSatisfiedAnnotation() throws AnnotatorException {
-    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
-    final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
-        SignType.Ed25519);
-    final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
-        SignType.Ed25519);
-    final SignatureInfo sigInfo = new SignatureInfo(pubKey, privKey);
+    @Test
+    public void executeShouldGetSatisfiedAnnotation() throws AnnotatorException, IOException, SignException {
+        final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
+            SignType.Ed25519);
 
         // init logger
-    final Logger logger = LogManager.getRootLogger();
-    Configurator.setRootLevel(Level.DEBUG);
+        final Logger logger = LogManager.getRootLogger();
+        Configurator.setRootLevel(Level.DEBUG);
 
-    final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());
 
-    final String signature = "B9E41596541933DB7144CFBF72105E4E53F9493729CA66331A658B1B18AC6DF5DA991"
-        +"AD9720FD46A664918DFC745DE2F4F1F8C29FF71209B2DA79DFD1A34F50C";
+        final String signature = "B9E41596541933DB7144CFBF72105E4E53F9493729CA66331A658B1B18AC6DF5DA991"
+            + "AD9720FD46A664918DFC745DE2F4F1F8C29FF71209B2DA79DFD1A34F50C";
 
-    final byte[] data = String.format("{seed: \"helloo\", signature: \"%s\"}", signature)
-        .getBytes();
+        final byte[] data = String.format("{seed: \"helloo\", signature: \"%s\"}", signature)
+            .getBytes();
 
+        final EnvironmentChecker annotator = new PkiChecker(logger, SignProviderFactories.getVerifier(pubKey));
+        assertTrue("isSatisfied should be true", annotator.isSatisfied(ctx, data));
+    }
 
-    final AnnotatorConfig pkiCfg = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {pkiCfg};  
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(pkiCfg, config, logger);
-    assertTrue("isSatisfied should be true", annotator.isSatisfied(ctx, data));
-  }
+    @Test
+    public void executeShouldGetUnsatisfiedAnnotation() throws AnnotatorException, IOException, SignException {
+        final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
+            SignType.Ed25519);
 
-  @Test
-  public void executeShouldGetUnsatisfiedAnnotation() throws AnnotatorException {
-    final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
-    final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key", 
-        SignType.Ed25519);
-    final KeyInfo privKey = new KeyInfo("./src/test/java/com/alvarium/annotators/private.key",
-        SignType.Ed25519);
-    final SignatureInfo sigInfo = new SignatureInfo(pubKey, privKey);
+        // init logger
+        final Logger logger = LogManager.getRootLogger();
+        Configurator.setRootLevel(Level.DEBUG);
 
-            // init logger
-    final Logger logger = LogManager.getRootLogger();
-    Configurator.setRootLevel(Level.DEBUG);
+        final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());
 
-    final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final String signature = "A9E41596541933DB7144CFBF72105E4E53F9493729CA66331A658B1B18AC6DF5DA991"
+            + "AD9720FD46A664918DFC745DE2F4F1F8C29FF71209B2DA79DFD1A34F50C";
 
-    final String signature = "A9E41596541933DB7144CFBF72105E4E53F9493729CA66331A658B1B18AC6DF5DA991"
-        +"AD9720FD46A664918DFC745DE2F4F1F8C29FF71209B2DA79DFD1A34F50C";
+        final byte[] data = String.format("{seed: \"helloo\", signature: \"%s\"}", signature)
+            .getBytes();
 
-    final byte[] data = String.format("{seed: \"helloo\", signature: \"%s\"}", signature)
-        .getBytes();
+        final EnvironmentChecker annotator = new PkiChecker(logger, SignProviderFactories.getVerifier(pubKey));
 
-    final AnnotatorConfig pkiCfg = this.getAnnotatorCfg();
-    final AnnotatorConfig[] annotators = {pkiCfg};   
-    final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.SHA256Hash), sigInfo, null, LayerType.Application);
-    final EnvironmentChecker annotator = annotatorFactory.getChecker(pkiCfg, config, logger);
+        assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
+    }
 
-    assertFalse("isSatisfied should be false", annotator.isSatisfied(ctx, data));
-  }
-
-  public AnnotatorConfig getAnnotatorCfg() {
-    final Gson gson = new GsonBuilder()
-      .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
-      .create();    
-    final String json = "{\"kind\": \"pki\"}";
-    return gson.fromJson(
-                json, 
-                AnnotatorConfig.class
-    ); 
-  }
 }

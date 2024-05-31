@@ -20,8 +20,8 @@ import org.apache.logging.log4j.Logger;
 
 import javax.net.ssl.SSLSocket;
 
-class TlsAnnotator extends AbstractAnnotator implements EnvironmentChecker {
-  protected TlsAnnotator(Logger logger) {
+public class TlsChecker extends AbstractChecker implements EnvironmentChecker {
+  public TlsChecker(Logger logger) {
     super(logger);
   }
 

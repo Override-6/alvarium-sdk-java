@@ -21,9 +21,7 @@ import java.nio.file.Paths;
 
 import com.alvarium.contracts.DerivedComponent;
 
-import com.alvarium.sign.KeyInfo;
-import com.alvarium.sign.SignType;
-import com.alvarium.sign.SignatureInfo;
+import com.alvarium.sign.*;
 
 import org.apache.http.entity.StringEntity;
 
@@ -42,7 +40,7 @@ public class Ed2551RequestHandlerTest {
         }
 
         @Test
-        public void addSignatureHeadersShouldExecuteCorrectly() throws IOException, RequestHandlerException {
+        public void addSignatureHeadersShouldExecuteCorrectly() throws IOException, RequestHandlerException, SignException {
 
                 final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
                                 SignType.Ed25519);
@@ -62,18 +60,18 @@ public class Ed2551RequestHandlerTest {
                                 "Content-Type", "Content-Length" };
 
                 Ed2551RequestHandler requestHandler = new Ed2551RequestHandler(request);
-                requestHandler.addSignatureHeaders(date, fields, sigInfo);
-                assertEquals(requestHandler.request.getHeaders("Signature-Input")[0].getValue(),
+                requestHandler.addSignatureHeaders(date, fields, SignProviderFactories.getSigner(sigInfo.getPrivateKey()), sigInfo.getPublicKey());
+                assertEquals(request.getHeaders("Signature-Input")[0].getValue(),
                                 String.format(
                                                 "\"@method\" \"@path\" \"@authority\" \"Content-Type\" \"Content-Length\";created=%s;keyid=\"%s\";alg=\"%s\";",
-                                                Long.toString((date.getTime() / 1000)),
+                                                date.getTime() / 1000,
                                                 Paths.get(sigInfo.getPublicKey().getPath()).getFileName(),
                                                 sigInfo.getPublicKey().getType().getValue()));
 
         }
 
         @Test(expected = RequestHandlerException.class)
-        public void addSignatureHeadersShouldThrowException() throws IOException, RequestHandlerException {
+        public void addSignatureHeadersShouldThrowException() throws IOException, RequestHandlerException, SignException {
 
                 final KeyInfo pubKey = new KeyInfo("./src/test/java/com/alvarium/annotators/public.key",
                                 SignType.Ed25519);
@@ -90,6 +88,6 @@ public class Ed2551RequestHandlerTest {
                 String[] fields = {};
 
                 Ed2551RequestHandler requestHandler = new Ed2551RequestHandler(request);
-                requestHandler.addSignatureHeaders(date, fields, sigInfo);
+                requestHandler.addSignatureHeaders(date, fields, SignProviderFactories.getSigner(sigInfo.getPrivateKey()), sigInfo.getPublicKey());
         }
 }

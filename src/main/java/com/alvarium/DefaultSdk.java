@@ -19,7 +19,7 @@ import com.alvarium.hash.HashProvider;
 import com.alvarium.hash.HashProviderFactory;
 import com.alvarium.hash.HashType;
 import com.alvarium.hash.HashTypeException;
-import com.alvarium.sign.SignatureInfo;
+import com.alvarium.sign.*;
 import com.alvarium.streams.StreamException;
 import com.alvarium.streams.StreamProvider;
 import com.alvarium.streams.StreamProviderFactory;
@@ -27,6 +27,7 @@ import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.ZonedDateTime;
@@ -37,14 +38,13 @@ import java.util.List;
 
 public class DefaultSdk implements Sdk {
     private final EnvironmentCheckerEntry[] checkers;
-    private final SdkInfo config;
     private final StreamProvider stream;
     private final Logger logger;
 
     private final HashType hash;
-    private final SignatureInfo signature;
     private final LayerType layer;
     private final HashProvider hashProvider;
+    private final Signer signer;
 
     private static final String HOST_NAME;
 
@@ -63,19 +63,18 @@ public class DefaultSdk implements Sdk {
     // which is instrumental in tracing the impact on the current layer's score from the lower layers.
     public static final String TAG_ENV_KEY = "TAG";
 
-    public DefaultSdk(EnvironmentCheckerEntry[] checkers, SdkInfo config, Logger logger) throws StreamException, HashTypeException {
+    public DefaultSdk(EnvironmentCheckerEntry[] checkers, SdkInfo config, Logger logger) throws StreamException, HashTypeException, SignException, IOException {
         this.checkers = checkers;
-        this.config = config;
         this.logger = logger;
         this.hash = config.getHash().getType();
-        this.signature = config.getSignature();
         this.layer = config.getLayer();
         this.hashProvider = new HashProviderFactory().getProvider(hash);
-
+        SignatureInfo signature = config.getSignature();
+        this.signer = SignProviderFactories.getSigner(signature.getPrivateKey());
 
         // init stream
         final StreamProviderFactory streamFactory = new StreamProviderFactory();
-        this.stream = streamFactory.getProvider(this.config.getStream());
+        this.stream = streamFactory.getProvider(config.getStream());
         this.stream.connect();
         this.logger.debug("stream provider connected successfully.");
     }
@@ -85,14 +84,13 @@ public class DefaultSdk implements Sdk {
     }
 
     public void create(byte[] data) throws AnnotatorException, StreamException {
-        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<String, Object>());
+        final PropertyBag properties = new ImmutablePropertyBag(new HashMap<>());
         this.create(properties, data);
     }
 
     public void mutate(PropertyBag properties, byte[] oldData, byte[] newData) throws AnnotatorException, StreamException {
         // source annotate the old data
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
-        final EnvironmentChecker sourceAnnotator = annotatorFactory.getChecker(new AnnotatorConfig(AnnotationType.SOURCE), this.config, this.logger);
+        final EnvironmentChecker sourceAnnotator = new SourceChecker(logger);
 
         String tag = this.getTagValue(layer);
 
@@ -109,7 +107,6 @@ public class DefaultSdk implements Sdk {
 
         // publish to the stream provider
         this.publishAnnotations(SdkAction.MUTATE, bundle);
-        this.logger.debug("data annotated and published successfully.");
     }
 
     public void mutate(byte[] oldData, byte[] newData) throws AnnotatorException, StreamException {
@@ -143,12 +140,12 @@ public class DefaultSdk implements Sdk {
     private void sdkCall(PropertyBag bag, SdkAction callAction, byte[] data) throws StreamException, AnnotatorException {
         final AnnotationBundle annotations = this.createAnnotations(checkers, bag, data);
         this.publishAnnotations(callAction, annotations);
-        this.logger.debug("data annotated and published successfully.");
     }
 
     /**
      * Executes all the specified annotators and returns a list of all the created annotations
      *
+     * @param checkers
      * @param properties
      * @param data
      * @return
@@ -192,12 +189,13 @@ public class DefaultSdk implements Sdk {
     private void publishAnnotations(SdkAction action, AnnotationBundle bundle) throws StreamException, AnnotatorException {
 
         SignedAnnotationBundle signedBundle;
-        signedBundle = AnnotationSigner.signBundle(signature.getPrivateKey(), bundle);
+        signedBundle = AnnotationSigner.signBundle(this.signer, bundle);
 
         // publish list of annotations to the StreamProvider
         final PublishWrapper wrapper = new PublishWrapper(action, bundle.getClass().getName(), signedBundle);
 
         this.stream.publish(wrapper);
+        this.logger.debug("data annotated and published successfully.");
     }
 
 

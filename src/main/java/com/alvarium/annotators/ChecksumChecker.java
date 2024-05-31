@@ -27,12 +27,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class ChecksumAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+public class ChecksumChecker extends AbstractChecker implements EnvironmentChecker {
 
 
     private HashProvider hashProvider;
 
-    protected ChecksumAnnotator(HashType hash, Logger logger) throws AnnotatorException {
+    protected ChecksumChecker(HashType hash, Logger logger) throws AnnotatorException {
         super(logger);
         this.initHashProvider(hash);
     }

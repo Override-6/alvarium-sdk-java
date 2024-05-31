@@ -35,7 +35,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.junit.Test;
 
-public class AnnotatorTest {
+public class EnvironmentCheckerTest {
 
     @Test
     public void mockAnnotatorShouldReturnSatisfiedAnnotation() throws AnnotatorException {
@@ -79,9 +79,8 @@ public class AnnotatorTest {
         final Logger logger = LogManager.getRootLogger();
         Configurator.setRootLevel(Level.DEBUG);
 
-        final EnvironmentCheckerFactory factory = new EnvironmentCheckerFactory();
-        final EnvironmentChecker satisfiedAnnotator = factory.getChecker(satisfiedAnnotatorInfo, config, logger);
-        final EnvironmentChecker unsatisfiedAnnotator = factory.getChecker(unsatisfiedAnnotatorInfo, config, logger);
+        final EnvironmentChecker satisfiedAnnotator = EnvironmentCheckerFactory.getChecker(satisfiedAnnotatorInfo, config, logger, null);
+        final EnvironmentChecker unsatisfiedAnnotator = EnvironmentCheckerFactory.getChecker(unsatisfiedAnnotatorInfo, config, logger, null);
 
         final byte[] data = "test data".getBytes();
         final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());

@@ -1,6 +1,6 @@
 
 /*******************************************************************************
- * Copyright 2021 Dell Inc.
+ * Copyright 2023 Dell Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,22 +14,30 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import com.alvarium.sign.SignatureInfo;
+import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.junit.Test;
 
-class PkiAnnotator extends AbstractPkiAnnotator implements EnvironmentChecker {
-    private final SignatureInfo signature;
+import java.util.HashMap;
 
-    protected PkiAnnotator(SignatureInfo signature, Logger logger) {
-        super(logger);
-        this.signature = signature;
-    }
+public class SourceCheckerTest {
+    @Test
+    public void executeShouldReturnAnnotation() throws AnnotatorException {
+        // construct annotator
+        final Logger logger = LogManager.getRootLogger();
+        Configurator.setRootLevel(Level.DEBUG);
 
-    public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
-        final Signable signable = Signable.fromJson(new String(data));
+        final EnvironmentChecker annotator = new SourceChecker(logger);
 
-        return verifySignature(signature.getPublicKey(), signable);
+        // dummy data and empty prop bag
+        final byte[] data = "test data".getBytes();
+        final PropertyBag ctx = new ImmutablePropertyBag(new HashMap<>());
+
+        assert annotator.isSatisfied(ctx, data);
     }
 
 }

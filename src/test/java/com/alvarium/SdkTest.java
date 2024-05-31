@@ -16,6 +16,9 @@ package com.alvarium;
 
 import com.alvarium.annotators.*;
 import com.alvarium.hash.HashTypeException;
+import com.alvarium.sign.SignException;
+import com.alvarium.sign.SignProviderFactories;
+import com.alvarium.sign.SignatureVerifier;
 import com.alvarium.streams.StreamException;
 import com.alvarium.utils.ImmutablePropertyBag;
 import com.alvarium.utils.PropertyBag;
@@ -78,20 +81,21 @@ public class SdkTest {
     }
 
     @Test
-    public void instantiateSdkShouldNotThrow() throws AnnotatorException, StreamException, HashTypeException {
+    public void instantiateSdkShouldNotThrow() throws AnnotatorException, StreamException, HashTypeException, IOException, SignException {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
         final EnvironmentCheckerEntry[] annotators = new EnvironmentCheckerEntry[sdkInfo.getAnnotators().length];
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
 
         // init logger
         final Logger logger = LogManager.getRootLogger();
         Configurator.setRootLevel(Level.DEBUG);
 
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(sdkInfo.getSignature().getPublicKey());
+
         for (int i = 0; i < annotators.length; i++) {
             AnnotatorConfig cfg = sdkInfo.getAnnotators()[i];
-            EnvironmentChecker checker = annotatorFactory.getChecker(cfg, sdkInfo, logger);
+            EnvironmentChecker checker = EnvironmentCheckerFactory.getChecker(cfg, sdkInfo, logger, verifier);
             annotators[i] = new EnvironmentCheckerEntry(cfg.getKind(), checker);
         }
 
@@ -110,20 +114,21 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldCreateAnnotations() throws AnnotatorException, StreamException, HashTypeException {
+    public void defaultSdkShouldCreateAnnotations() throws AnnotatorException, StreamException, HashTypeException, IOException, SignException {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
         final EnvironmentCheckerEntry[] annotators = new EnvironmentCheckerEntry[sdkInfo.getAnnotators().length];
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
 
         // init logger
         final Logger logger = LogManager.getRootLogger();
         Configurator.setRootLevel(Level.DEBUG);
 
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(sdkInfo.getSignature().getPublicKey());
+
         for (int i = 0; i < annotators.length; i++) {
             AnnotatorConfig cfg = sdkInfo.getAnnotators()[i];
-            EnvironmentChecker checker = annotatorFactory.getChecker(cfg, sdkInfo, logger);
+            EnvironmentChecker checker = EnvironmentCheckerFactory.getChecker(cfg, sdkInfo, logger, verifier);
             annotators[i] = new EnvironmentCheckerEntry(cfg.getKind(), checker);
         }
 
@@ -137,12 +142,12 @@ public class SdkTest {
 
     @Test
     public void defaultSdkShouldCreateTransitionAnnotations() throws AnnotatorException,
-            StreamException, HashTypeException {
+        StreamException, HashTypeException, IOException, SignException {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
         final EnvironmentCheckerEntry[] annotators = new EnvironmentCheckerEntry[sdkInfo.getAnnotators().length];
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(sdkInfo.getSignature().getPublicKey());
 
         // init logger
         final Logger logger = LogManager.getRootLogger();
@@ -150,7 +155,7 @@ public class SdkTest {
 
         for (int i = 0; i < annotators.length; i++) {
             AnnotatorConfig cfg = sdkInfo.getAnnotators()[i];
-            EnvironmentChecker checker = annotatorFactory.getChecker(cfg, sdkInfo, logger);
+            EnvironmentChecker checker = EnvironmentCheckerFactory.getChecker(cfg, sdkInfo, logger, verifier);
             annotators[i] = new EnvironmentCheckerEntry(cfg.getKind(), checker);
         }
 
@@ -163,12 +168,13 @@ public class SdkTest {
     }
 
     @Test
-    public void defaultSdkShouldMutateData() throws AnnotatorException, StreamException, HashTypeException {
+    public void defaultSdkShouldMutateData() throws AnnotatorException, StreamException, HashTypeException, IOException, SignException {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
         final EnvironmentCheckerEntry[] annotators = new EnvironmentCheckerEntry[sdkInfo.getAnnotators().length];
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(sdkInfo.getSignature().getPublicKey());
+
 
         // init logger
         final Logger logger = LogManager.getRootLogger();
@@ -176,7 +182,7 @@ public class SdkTest {
 
         for (int i = 0; i < annotators.length; i++) {
             AnnotatorConfig cfg = sdkInfo.getAnnotators()[i];
-            EnvironmentChecker checker = annotatorFactory.getChecker(cfg, sdkInfo, logger);
+            EnvironmentChecker checker = EnvironmentCheckerFactory.getChecker(cfg, sdkInfo, logger, verifier);
             annotators[i] = new EnvironmentCheckerEntry(cfg.getKind(), checker);
         }
 
@@ -192,12 +198,13 @@ public class SdkTest {
 
     @Test
     public void defaultSdkShouldCreatePublishedAnnotations() throws AnnotatorException,
-            StreamException, HashTypeException {
+        StreamException, HashTypeException, IOException, SignException {
         final SdkInfo sdkInfo = SdkInfo.fromJson(this.testJson);
 
         // init annotators
         final EnvironmentCheckerEntry[] annotators = new EnvironmentCheckerEntry[sdkInfo.getAnnotators().length];
-        final EnvironmentCheckerFactory annotatorFactory = new EnvironmentCheckerFactory();
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(sdkInfo.getSignature().getPublicKey());
+
 
         // init logger
         final Logger logger = LogManager.getRootLogger();
@@ -205,7 +212,7 @@ public class SdkTest {
 
         for (int i = 0; i < annotators.length; i++) {
             AnnotatorConfig cfg = sdkInfo.getAnnotators()[i];
-            EnvironmentChecker checker = annotatorFactory.getChecker(cfg, sdkInfo, logger);
+            EnvironmentChecker checker = EnvironmentCheckerFactory.getChecker(cfg, sdkInfo, logger, verifier);
             annotators[i] = new EnvironmentCheckerEntry(cfg.getKind(), checker);
         }
 

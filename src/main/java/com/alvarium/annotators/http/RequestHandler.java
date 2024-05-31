@@ -14,27 +14,30 @@
 
 package com.alvarium.annotators.http;
 
+import com.alvarium.sign.KeyInfo;
+import com.alvarium.sign.Signer;
+
 import java.util.Date;
-import com.alvarium.sign.SignatureInfo;
 
 /**
  * A unit that handles the incoming HTTP request to conform with the SDK's
  * requirments.
  */
 public interface RequestHandler {
-  /**
-   * AddSignatureHeaders takes time of creation of request, the fields to be taken
-   * into consideration for the SignatureInput header, and the keys used in
-   * signing.
-   * Assembles the SignatureInput and Signature fields, then adds them to the
-   * request as headers.
-   * 
-   * @param ticks  Date of creation of request
-   * @param fields Array of the fields to be taken into consideration for the
-   *               SignatureInput header
-   * @param keys   Signature info to use in signing the seed
-   */
+    /**
+     * AddSignatureHeaders takes time of creation of request, the fields to be taken
+     * into consideration for the SignatureInput header, and the keys used in
+     * signing.
+     * Assembles the SignatureInput and Signature fields, then adds them to the
+     * request as headers.
+     *
+     * @param ticks     Date of creation of request
+     * @param fields    Array of the fields to be taken into consideration for the
+     *                  SignatureInput header
+     * @param signer
+     * @param publicKey
+     */
 
-  void addSignatureHeaders(Date ticks, String[] fields, SignatureInfo keys) throws RequestHandlerException;
+    void addSignatureHeaders(Date ticks, String[] fields, Signer signer, KeyInfo publicKey) throws RequestHandlerException;
 
 }

@@ -14,7 +14,6 @@
 package com.alvarium.annotators;
 
 
-
 import com.alvarium.contracts.AnnotationType;
 import com.alvarium.hash.HashProvider;
 import com.alvarium.hash.HashProviderFactory;
@@ -35,12 +34,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+public class SourceCodeChecker extends AbstractChecker implements EnvironmentChecker {
 
 
     private HashProvider hashProvider;
 
-    protected SourceCodeAnnotator(HashType hash, Logger logger) throws AnnotatorException {
+    public SourceCodeChecker(HashType hash, Logger logger) throws AnnotatorException {
         super(logger);
         this.initHashProvider(hash);
     }
@@ -52,8 +51,8 @@ class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecke
     public boolean isSatisfied(PropertyBag ctx, byte[] data) throws AnnotatorException {
 
         final SourceCodeAnnotatorProps props = ctx.getProperty(
-                AnnotationType.SourceCode.name(),
-                SourceCodeAnnotatorProps.class
+            AnnotationType.SourceCode.name(),
+            SourceCodeAnnotatorProps.class
         );
 
         final String checksum = this.readChecksum(props.getChecksumPath());
@@ -70,12 +69,12 @@ class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecke
             throw new AnnotatorException("Failed to read file, could not validate checksum", e);
         } catch (SecurityException e) {
             throw new AnnotatorException(
-                    "Insufficient permission to access file, could not validate checksum",
-                    e
+                "Insufficient permission to access file, could not validate checksum",
+                e
             );
         } catch (OutOfMemoryError e) {
             throw new AnnotatorException(
-                    "Failed to read file due to size larger than 2GB, could not validate checksum " + e
+                "Failed to read file due to size larger than 2GB, could not validate checksum " + e
             );
         } catch (Exception e) {
             throw new AnnotatorException("Could not validate checksum");
@@ -89,7 +88,7 @@ class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecke
      * @throws AnnotatorException - If hashing algorithm not found,
      *                            or if an unknown exception was thrown
      */
-    private final void initHashProvider(HashType hashType) throws AnnotatorException {
+    private void initHashProvider(HashType hashType) throws AnnotatorException {
         try {
             this.hashProvider = new HashProviderFactory().getProvider(hashType);
         } catch (HashTypeException e) {
@@ -149,17 +148,17 @@ class SourceCodeAnnotator extends AbstractAnnotator implements EnvironmentChecke
             fs.close();
         } catch (OutOfMemoryError e) {
             throw new AnnotatorException(
-                    "Failed to read file due to size larger than 2GB, could not validate checksum" + e
+                "Failed to read file due to size larger than 2GB, could not validate checksum" + e
             );
         } catch (IOException e) {
             throw new AnnotatorException(
-                    "Failed to read file contents, could not generate checksum",
-                    e
+                "Failed to read file contents, could not generate checksum",
+                e
             );
         } catch (SecurityException e) {
             throw new AnnotatorException(
-                    "Insufficient permission to access file, could not validate checksum",
-                    e
+                "Insufficient permission to access file, could not validate checksum",
+                e
             );
         } catch (Exception e) {
             throw new AnnotatorException("Could not validate checksum", e);

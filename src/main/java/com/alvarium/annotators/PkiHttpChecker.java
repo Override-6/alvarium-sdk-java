@@ -1,4 +1,3 @@
-
 /*******************************************************************************
  * Copyright 2022 Dell Inc.
  *
@@ -18,21 +17,22 @@ package com.alvarium.annotators;
 import com.alvarium.annotators.http.ParseResult;
 import com.alvarium.annotators.http.ParseResultException;
 import com.alvarium.contracts.AnnotationType;
-import com.alvarium.sign.KeyInfo;
-import com.alvarium.sign.SignType;
-import com.alvarium.sign.SignatureInfo;
+import com.alvarium.sign.*;
+import com.alvarium.utils.Encoder;
 import com.alvarium.utils.PropertyBag;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-class PkiHttpAnnotator extends AbstractPkiAnnotator implements EnvironmentChecker {
+public class PkiHttpChecker extends AbstractChecker implements EnvironmentChecker {
+
     private final SignatureInfo signature;
 
-    protected PkiHttpAnnotator(SignatureInfo signature, Logger logger) {
+    public PkiHttpChecker(Logger logger, SignatureInfo signature) {
         super(logger);
         this.signature = signature;
     }
@@ -68,9 +68,21 @@ class PkiHttpAnnotator extends AbstractPkiAnnotator implements EnvironmentChecke
             throw new AnnotatorException("Invalid key type " + parsed.getAlgorithm());
         }
         KeyInfo publicKey = new KeyInfo(publicKeyPath, alg);
-        SignatureInfo sig = new SignatureInfo(publicKey, signature.getPrivateKey());
 
-        return verifySignature(sig.getPublicKey(), signable);
+        SignatureVerifier verifier;
+        try {
+            verifier = SignProviderFactories.getVerifier(publicKey);
+        } catch (SignException | IOException e) {
+            throw new AnnotatorException("Error instantiating a verifier from information received in HTTP request headers", e);
+        }
+
+        try {
+            verifier.verify(signable.getSeed().getBytes(), Encoder.hexToBytes(signable.getSignature()));
+        } catch (SignException e) {
+            logger.debug("signature verification failed : ", e);
+            return false;
+        }
+        return true;
     }
 
 }

@@ -22,12 +22,12 @@ import com.alvarium.contracts.AnnotationType;
 import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Logger;
 
-public class SbomAnnotator extends AbstractAnnotator implements EnvironmentChecker {
+public class SbomChecker extends AbstractChecker implements EnvironmentChecker {
 
     private final SbomProvider sbom;
 
 
-    protected SbomAnnotator(SbomAnnotatorConfig cfg, Logger logger) throws AnnotatorException {
+    public SbomChecker(SbomAnnotatorConfig cfg, Logger logger) throws AnnotatorException {
         super(logger);
         try {
             this.sbom = new SbomProviderFactory().getProvider(cfg, this.logger);

@@ -15,85 +15,81 @@
 package com.alvarium.sign;
 
 
-import org.junit.Test;  
-import static org.junit.Assert.*;
-
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import com.alvarium.utils.Encoder;
 import com.google.crypto.tink.subtle.Ed25519Sign;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.Assert.assertEquals;
 
 public class SignProviderTest {
 
-  @Test(expected = SignException.class)
-  public void factoryShouldReturnNoConcreteTypesError() throws SignException {
-    final SignProviderFactory factory = new SignProviderFactory();
-    factory.getProvider(SignType.none);   
-  }
+    @Test
+    public void factoryShouldReturnEd25519() throws SignException, IOException {
+        Signer ed25519Provider = SignProviderFactories.getSigner(new KeyInfo(".gitignore", SignType.Ed25519));
+        assertEquals(ed25519Provider.getClass(), Ed25519Signer.class);
+    }
 
-  @Test
-  public void factoryShouldReturnEd25519() throws SignException {
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider ed25519Provider = factory.getProvider(SignType.Ed25519);
-    assertEquals(ed25519Provider.getClass(), Ed25519Provider.class);
-  }
+    @Test
+    public void signAndVerifyShouldVerifyTrue() throws Exception {
+        final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final byte[] privateKey = keyPair.getPrivateKey();
+        final byte[] publicKey = keyPair.getPublicKey();
 
-  @Test
-  public void signAndVerifyShouldVerifyTrue()  throws Exception {
-    final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final byte[] privateKey = keyPair.getPrivateKey();
-    final byte[] publicKey = keyPair.getPublicKey();
-  
-    byte[] content = "hello".getBytes();
+        Path privatePath = Files.createTempFile("alvarium", "private-key");
+        Path publicPath = Files.createTempFile("alvarium", "public-key");
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
+        Files.writeString(privatePath, Encoder.bytesToHex(privateKey));
+        Files.writeString(publicPath, Encoder.bytesToHex(publicKey));
 
-    final String signedString = signProvider.sign(privateKey, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(publicKey, content, signed);
-  }
+        byte[] content = "hello".getBytes();
 
-  @Test(expected = SignException.class)
-  public void signAndVerifyShouldVerifyFalse() throws Exception {
-    final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final Ed25519Sign.KeyPair wrongKeyPair = Ed25519Sign.KeyPair.newKeyPair();
-    final byte[] privateKey = keyPair.getPrivateKey();
-    final byte[] wrongPublicKey = wrongKeyPair.getPublicKey();
+        Signer signer = SignProviderFactories.getSigner(new KeyInfo(privatePath.toString(), SignType.Ed25519));
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(new KeyInfo(publicPath.toString(), SignType.Ed25519));
 
-    byte[] content = "foo".getBytes();
+        final String signedString = signer.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        verifier.verify(content, signed);
+    }
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
+    @Test(expected = SignException.class)
+    public void signAndVerifyShouldVerifyFalse() throws Exception {
+        final Ed25519Sign.KeyPair keyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final Ed25519Sign.KeyPair wrongKeyPair = Ed25519Sign.KeyPair.newKeyPair();
+        final byte[] privateKey = keyPair.getPrivateKey();
+        final byte[] wrongPublicKey = wrongKeyPair.getPublicKey();
 
-    final String signedString = signProvider.sign(privateKey, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(wrongPublicKey, content, signed);    
-  }
+        Path privatePath = Files.createTempFile("alvarium", "private-key");
+        Path publicPath = Files.createTempFile("alvarium", "public-key");
 
-  @Test
-  public void signWithProvidedKeyFilesShouldVerifyTrue() throws Exception {
-    
-    // Load keys from files
-    String pirvateKeyPath = "./src/test/java/com/alvarium/sign/private.key";
-    String publicKeyPath = "./src/test/java/com/alvarium/sign/public.key";
-    final String privateKey = Files.readString(Paths.get(pirvateKeyPath), StandardCharsets.US_ASCII);
-    final String publicKey = Files.readString(Paths.get(publicKeyPath), StandardCharsets.US_ASCII);
+        Files.writeString(privatePath, Encoder.bytesToHex(privateKey));
+        Files.writeString(publicPath, Encoder.bytesToHex(wrongPublicKey));
 
-    // Decode keys into bytes
-    final byte[] privateKeyDecoded = Encoder.hexToBytes(privateKey);
-    final byte[] publicKeyDecoded = Encoder.hexToBytes(publicKey);
+        byte[] content = "foo".getBytes();
 
-    byte[] content = "foo".getBytes();
+        Signer signer = SignProviderFactories.getSigner(new KeyInfo(privatePath.toString(), SignType.Ed25519));
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(new KeyInfo(publicPath.toString(), SignType.Ed25519));
 
-    final SignProviderFactory factory = new SignProviderFactory();
-    final SignProvider signProvider = factory.getProvider(SignType.Ed25519);
 
-    final String signedString = signProvider.sign(privateKeyDecoded, content);
-    final byte[] signed = Encoder.hexToBytes(signedString);
-    signProvider.verify(publicKeyDecoded, content, signed);
-  }
+        final String signedString = signer.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        verifier.verify(content, signed);
+    }
+
+    @Test
+    public void signWithProvidedKeyFilesShouldVerifyTrue() throws Exception {
+        byte[] content = "foo".getBytes();
+
+        Signer signer = SignProviderFactories.getSigner(new KeyInfo("./src/test/java/com/alvarium/sign/private.key", SignType.Ed25519));
+        SignatureVerifier verifier = SignProviderFactories.getVerifier(new KeyInfo("./src/test/java/com/alvarium/sign/public.key", SignType.Ed25519));
+
+        final String signedString = signer.sign(content);
+        final byte[] signed = Encoder.hexToBytes(signedString);
+        verifier.verify(content, signed);
+    }
+
 
 }

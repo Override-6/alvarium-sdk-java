@@ -14,11 +14,13 @@
  *******************************************************************************/
 package com.alvarium.annotators;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Map;
-
+import com.alvarium.contracts.AnnotationType;
+import com.alvarium.hash.HashProvider;
+import com.alvarium.hash.HashProviderFactory;
+import com.alvarium.hash.HashType;
+import com.alvarium.hash.HashTypeException;
+import com.alvarium.utils.ImmutablePropertyBag;
+import com.alvarium.utils.PropertyBag;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,23 +29,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-
-import com.alvarium.SdkInfo;
-import com.alvarium.contracts.AnnotationType;
-import com.alvarium.contracts.LayerType;
-import com.alvarium.hash.HashInfo;
-import com.alvarium.hash.HashProvider;
-import com.alvarium.hash.HashProviderFactory;
-import com.alvarium.hash.HashType;
-import com.alvarium.hash.HashTypeException;
-import com.alvarium.serializers.AnnotatorConfigConverter;
-import com.alvarium.sign.KeyInfo;
-import com.alvarium.sign.SignType;
-import com.alvarium.sign.SignatureInfo;
-import com.alvarium.utils.ImmutablePropertyBag;
-import com.alvarium.utils.PropertyBag;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Map;
 
 public class SourceCodeAnnotatorTest {
 
@@ -52,30 +41,10 @@ public class SourceCodeAnnotatorTest {
 
     @Test
     public void executeShouldReturnAnnotation() throws AnnotatorException, IOException, HashTypeException {
-        EnvironmentCheckerFactory factory = new EnvironmentCheckerFactory();
-        KeyInfo privateKey = new KeyInfo(
-                "./src/test/java/com/alvarium/annotators/public.key",
-                SignType.Ed25519);
-        KeyInfo publicKey = new KeyInfo(
-                "./src/test/java/com/alvarium/annotators/public.key",
-                SignType.Ed25519);
-
-        SignatureInfo sign = new SignatureInfo(publicKey, privateKey);
-
-        final Gson gson = new GsonBuilder()
-                .registerTypeAdapter(AnnotatorConfig.class, new AnnotatorConfigConverter())
-                .create();
-        final String json = "{\"kind\": \"source-code\"}";
-        final AnnotatorConfig annotatorInfo = gson.fromJson(
-                json,
-                AnnotatorConfig.class
-        );
-        final AnnotatorConfig[] annotators = {annotatorInfo};
-        final SdkInfo config = new SdkInfo(annotators, new HashInfo(HashType.MD5Hash), sign, null, LayerType.Application);
         // init logger
         final Logger logger = LogManager.getRootLogger();
         Configurator.setRootLevel(Level.DEBUG);
-        EnvironmentChecker annotator = factory.getChecker(annotatorInfo, config, logger);
+        EnvironmentChecker annotator = new SourceCodeChecker(HashType.MD5Hash, logger);
 
         final File sourceCodeDir = dir.newFolder("sourceCode");
         final File f1 = new File(sourceCodeDir, "file1");
@@ -89,7 +58,7 @@ public class SourceCodeAnnotatorTest {
 
         final File checksumFile = dir.newFile("checksum");
 
-        final HashProvider hash = new HashProviderFactory().getProvider(config.getHash().getType());
+        final HashProvider hash = new HashProviderFactory().getProvider(HashType.MD5Hash);
         String hashAndPath = hash.derive(Files.readAllBytes(f1.toPath())) + "  " + f1.toPath().toString() + "\n";
         hashAndPath = hashAndPath + hash.derive(Files.readAllBytes(f2.toPath())) + "  " + f2.toPath().toString() + "\n";
         final String checksum = hash.derive(hashAndPath.getBytes());
